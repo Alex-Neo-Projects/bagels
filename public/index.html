@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test app</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./build/bundle.js"></script>
+    
+    <!-- Listen to changes for live reloads -->
+    <script>new EventSource('/esbuild').addEventListener('change', () => location.reload())</script>
+  </body>
+</html>

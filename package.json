@@ -1,0 +1,17 @@
+{
+  "name": "cra-scratch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild ./src/App.jsx --bundle --outfile=./public/build/bundle.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.17.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
