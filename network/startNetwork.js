@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-const { Worker } = require('worker_threads');
-const { kill } = require('process');
-const path = require('path');
-const open = require('open');
+import { Worker } from 'worker_threads'
+import process, { kill } from 'process'
+import open from 'open'
+import { getFilepath, getPathDirname } from '../utils.js'
 
 async function workerPromise(script) {
   return await new Promise((resolve, reject) => {
@@ -17,46 +17,41 @@ async function workerPromise(script) {
   })
 }
 
-const children = []
-
+let children = []
 async function main() {
   try {
-    // Start Anvil
-    const bagelsScriptPath = path.dirname(require.main.filename);
+    let filePaths = {
+      anvilPath: getFilepath([getPathDirname(), 'network', 'spawnAnvil.js']),
+      backendPath: getFilepath([
+        getPathDirname(),
+        'network',
+        'spawnBackend.js',
+      ]),
+      frontendPath: getFilepath([getPathDirname(), 'network', 'spawnUI.js']),
+    }
 
-    let anvilPath = path.join(bagelsScriptPath, 'spawnAnvil.js');
-
-    const anvilWorker = await workerPromise(`${anvilPath}`)
-    
+    const anvilWorker = await workerPromise(filePaths.anvilPath)
     if (!anvilWorker) {
       console.log('Unable to start Anvil')
       process.exit(1)
     }
-
     children.push(anvilWorker)
 
-    let backendPath = path.join(bagelsScriptPath, 'spawnBackend.cjs');
-
-    const backendWorker = await workerPromise(`${backendPath}`)
-
+    const backendWorker = await workerPromise(filePaths.backendPath)
     if (!backendWorker) {
       console.log('Unable to start the backend')
       process.exit(1)
     }
-
     children.push(backendWorker)
 
-    let frontendPath = path.join(bagelsScriptPath, 'spawnUI.cjs');
-
-    const uiWorker = await workerPromise(`${frontendPath}`)
-
+    const uiWorker = await workerPromise(filePaths.frontendPath)
     if (!uiWorker) {
       console.log('Unable to start frontend')
       process.exit(1)
     }
     children.push(uiWorker)
 
-    // // Start Local Host
+    // Start Local Host
     open('http://localhost:9091')
   } catch (e) {
     console.error(e)
@@ -68,7 +63,10 @@ process.on('SIGINT', () => {
   console.log(`\nShutting down ${children.length} services`)
 
   if (children.length >= 1) {
-    children.forEach((child) => kill(child.toString()))
+    children.forEach((child) => {
+      kill(child, 'SIGTERM')
+    })
+    children = []
   }
 })
 

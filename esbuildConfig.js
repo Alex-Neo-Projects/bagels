@@ -11,7 +11,6 @@ let context = await esbuild.context({
 
 console.log('Starting bagel 🥯 \n'); 
 
-// exec('http-server')
 await context.watch();
 
 // Don't want to use port 3000/3001 in case a user is already using those ports
