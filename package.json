@@ -8,9 +8,7 @@
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.cjs",
     "siteEsBuild": "bun esbuildConfig.js ",
-
     "site": "npm-run-all --parallel siteEsBuild tailwind",
-
     "dev": "npm-run-all --parallel network tailwind"
   },
   "bin": {
@@ -31,6 +29,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "solc": "^0.8.17",
-    "tailwindcss": "^3.2.4"
+    "tailwindcss": "^3.2.4",
+    "wouter": "2.9.1"
   }
 }

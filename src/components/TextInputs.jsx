@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SERVER_URL } from '../constants'
 
 export function TextInputs({ val, idxOne, getBalance, deployContract }) {
   const [inputs, setInputs] = useState([])
@@ -184,7 +185,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
             }
 
             const res = await fetch(
-              'http://localhost:3001/executeTransaction',
+              `${SERVER_URL}/executeTransaction`,
               {
                 method: 'POST',
                 headers: {

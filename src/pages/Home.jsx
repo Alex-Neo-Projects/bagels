@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import Header from './components/Header';
+import Header from '../components/Header';
+import { SERVER_URL } from '../constants.js'; 
 
 export default function Home() {
   const [solidityFiles, setSolidityFiles] = useState([]); 
   const [loading, setLoading] = useState(true); 
 
   async function getSolidityFiles() { 
-    const result = await fetch('http://localhost:3001/solidityFiles', {
+    const result = await fetch(`${SERVER_URL}/solidityFiles`, {
       method: 'GET', 
     })
+
     const jsonifiedResult = await result.json();
 
     setSolidityFiles(jsonifiedResult['files']); 
