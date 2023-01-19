@@ -1,6 +1,7 @@
+#!/usr/bin/env node
 import { spawn } from 'child_process'
 import { kill } from 'process'
-import { parentPort } from 'worker_threads'
+import { isMainThread, parentPort } from 'worker_threads'
 
 let anvilProcessGlobal
 
@@ -15,36 +16,28 @@ export function startupAnvil(network = '') {
 
   const res = spawn('anvil', args, {
     shell: true,
+    stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   })
 
   return res
 }
 
 export function killAnvil() {
-  if(anvilProcessGlobal) {
+  if (anvilProcessGlobal) {
     kill(anvilProcessGlobal.pid)
-  }else {
-    console.error("Anvil process does not exist")
+  } else {
+    console.error('Anvil process does not exist')
   }
 }
 
 async function main() {
   const anvilProcess = startupAnvil()
+
   anvilProcessGlobal = anvilProcess
 
-  anvilProcess.stderr.on('data', (data) => {
-    console.log('Anvil process Error: : ' + data.toString())
-  })
-
-  anvilProcess.stdout.on('data', (data) => {
+  if (!isMainThread) {
     parentPort.postMessage(anvilProcess.pid)
-  })
-
-  anvilProcess.on('exit', function (code) {
-    if (code) {
-      console.log('Anvil process exited with code: ' + code.toString())
-    }
-  })
+  }
 }
 
 main()
