@@ -1,5 +1,6 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
+import { SERVER_URL } from '../constants'
 
 const PORT = 9090
 
@@ -177,7 +178,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
             }
 
             const res = await fetch(
-              `http://localhost:${PORT}/executeTransaction`,
+              `${SERVER_URL}/executeTransaction`,
               {
                 method: 'POST',
                 headers: {

@@ -24,7 +24,7 @@ export function startupAnvil(network = '') {
 
 export function killAnvil() {
   if (anvilProcessGlobal) {
-    kill(anvilProcessGlobal.pid)
+    kill(anvilProcessGlobal.pid, 'SIGTERM')
   } else {
     console.error('Anvil process does not exist')
   }

@@ -2,7 +2,6 @@ import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
-import { usdc_abi } from '../contracts/abis/usdc.js'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import { getFilepath, getPathDirname } from '../utils.js'
@@ -134,7 +133,7 @@ app.post('/executeTransaction', async (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Listening to server on PORT ${PORT}`)
+  // console.log(`Listening to server on PORT ${PORT}`)
 })
 
 async function compileContract(file) {
