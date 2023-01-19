@@ -40,6 +40,7 @@ export default function Root() {
       method: 'GET',
     })
     const jsonifiedResult = await result.json()
+    console.log(jsonifiedResult, result.status)
     if (result.status === 200) {
       setSolidityFiles(jsonifiedResult['files'])
     } else {
@@ -194,29 +195,64 @@ export default function Root() {
 
   if (!selectedFile) {
     return (
-      <div>
-        <h1>Select a contract:</h1>
-        {loadingFiles && <h2>Loading Contracts</h2>}
-        {error && !loadingFiles && (
-          <h2>Error loading contracts: {error.message}</h2>
-        )}
-        {!error && !loadingFiles && (
-          <div>
-            {solidityFiles.map((file, idx) => (
-              <button
-                key={idx.toString()}
-                onClick={() => {
-                  setSelectedFile(file)
-                }}
-              >
-                {file}
-              </button>
-            ))}
-          </div>
-        )}
-        {!error && !loadingFiles && solidityFiles.length === 0 && (
-          <h2>No solidity files found.</h2>
-        )}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        <h1
+          style={{
+            fontSize: '3rem',
+            textAlign: 'center',
+          }}
+        >
+          Select your Smart Contract
+        </h1>
+
+        <div>
+          {loadingFiles && <h2>Loading Contracts</h2>}
+          {error && !loadingFiles && (
+            <h2>Error loading contracts: {error.message}</h2>
+          )}
+          {!error && !loadingFiles && solidityFiles.length === 0 && (
+            <h2>No solidity files found.</h2>
+          )}
+          {!error && !loadingFiles && (
+            <div>
+              {solidityFiles.map((file, idx) => (
+                <button
+                  style={{
+                    width: '200px',
+                    height: '50px',
+                    borderRadius: '10px',
+                    borderColor: '#ffffff',
+                    overflow: 'hidden',
+                    margin: '1rem',
+                    backgroundColor: '#2C5FF6',
+                    outline: ' 2px solid transparent',
+                    outlineOffset: '2px',
+                  }}
+                  key={idx.toString()}
+                  onClick={() => {
+                    setSelectedFile(file)
+                  }}
+                >
+                  <p
+                    style={{
+                      color: '#ffffff',
+                    }}
+                  >
+                    {file}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
