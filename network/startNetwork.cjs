@@ -23,8 +23,6 @@ async function workerPromise(script) {
 
 const children = []
 
-exec('http://localhost:3000')
-
 async function main() {
   try {
     // Start Anvil
@@ -62,7 +60,7 @@ async function main() {
     }
     children.push(uiWorker)
 
-    // // Start Local Host
+    // Start Local Host
     open('http://localhost:9091')
   } catch (e) {
     console.error(e)
@@ -74,7 +72,7 @@ process.on('SIGINT', () => {
   console.log(`\nShutting down ${children.length} services`)
 
   if (children.length >= 1) {
-    children.forEach((child) => kill(child.toString()))
+    children.forEach((child) => kill(child))
   }
 })
 

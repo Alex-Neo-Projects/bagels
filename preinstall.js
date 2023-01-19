@@ -20,7 +20,6 @@ async function main() {
       ],
       {
         shell: true,
-        stdio: 'inherit'
       },
     )
   } catch (e) {

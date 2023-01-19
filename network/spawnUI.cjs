@@ -7,7 +7,7 @@ async function main() {
 
   let esBuildDir = path.join(bagelsScriptPath, '..')
 
-  const uiProcess = spawn('node', ['esbuildConfig.js'], {
+  const uiProcess = spawn('bun', ['esbuildConfig.js'], {
     cwd: esBuildDir,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   })

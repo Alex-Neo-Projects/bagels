@@ -1,17 +1,37 @@
 import { spawn } from 'child_process'
+import { kill } from 'process'
 import { parentPort } from 'worker_threads'
 
-async function main() {
-  const anvilProcess = spawn(
-    'anvil',
-    [
+let anvilProcessGlobal
+
+export function startupAnvil(network = '') {
+  let args = []
+  if (network === 'mainnet') {
+    args = [
       '--fork-url',
       'https://eth-mainnet.g.alchemy.com/v2/YKOGR_zFYv0ouTsGab24VKwOm5w7k6QZ',
-    ],
-    {
-      shell: true,
-    },
-  )
+    ]
+  }
+
+  const res = spawn('anvil', args, {
+    shell: true,
+  })
+
+  return res
+}
+
+export function killAnvil() {
+  if(anvilProcessGlobal) {
+    kill(anvilProcessGlobal.pid)
+  }else {
+    console.error("Anvil process does not exist")
+  }
+}
+
+async function main() {
+  const anvilProcess = startupAnvil()
+  
+  anvilProcessGlobal = anvilProcess
 
   anvilProcess.stderr.on('data', (data) => {
     console.log('Anvil process Error: : ' + data.toString())
@@ -22,7 +42,7 @@ async function main() {
   })
 
   anvilProcess.on('exit', function (code) {
-    if(code){
+    if (code) {
       console.log('Anvil process exited with code: ' + code.toString())
     }
   })

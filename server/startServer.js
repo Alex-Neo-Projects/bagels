@@ -3,7 +3,7 @@ import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
-import { usdc_abi } from './abis/usdc.js'
+import { usdc_abi } from '../contracts/abis/usdc.js'
 import cors from 'cors'
 import chokidar from 'chokidar'
 
@@ -20,7 +20,7 @@ const __dirname = path.resolve()
 app.use(express.json())
 app.use(cors())
 
-let globalContract;
+let globalContract
 
 // Adding a server for ui tool
 app.get('/', (req, res) => {
@@ -28,52 +28,56 @@ app.get('/', (req, res) => {
 })
 
 let globalAbis = {}
-let solidityFiles = []; 
+let solidityFiles = []
 
 const getFiles = (path) => {
-  if (fs.lstatSync(path).isDirectory()) { 
-    fs.readdirSync(path).forEach(f => {   
+  if (fs.lstatSync(path).isDirectory()) {
+    fs.readdirSync(path).forEach((f) => {
       getFiles(path + '/' + f)
     })
-  } else if (path.endsWith(".sol")) {
+  } else if (path.endsWith('.sol')) {
     console.log('pushing')
     solidityFiles.push(path)
   }
 
-  return solidityFiles; 
+  return solidityFiles
 }
-
 app.get('/solidityFiles', async (req, res) => {
-  const files = fs.readdirSync(__dirname)
-
-  var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
-
-  return res.status(200).send({'files': solidityFiles})
-}); 
+  try {
+    const files = fs.readdirSync(path.resolve(__dirname, 'contracts'))
+    var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+    return res.status(200).send({ files: solidityFiles })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
 
 app.post('/deployContract', async (req, res) => {
-  try { 
-    const { abi, bytecode, constructor } = req.body; 
-  
+  try {
+    const { abi, bytecode, constructor } = req.body
+
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
     globalContract = contract
-  
+
     return res.status(200).send('asdf')
   } catch (e) {
-    console.log('contract deployment error: ', e);
+    console.log('contract deployment error: ', e)
 
-    return res.status(500).send({'error': e});
+    return res.status(500).send({ error: e })
   }
 })
 
 app.get('/abi', async (req, res) => {
-  const { contractName } = req.query; 
+  const { contractName } = req.query
 
-  let [abis, bytecode] = await compileContract(contractName)
-
-  globalAbis = abis;
-
-  return res.status(200).send({'abi': globalAbis, 'bytecode': bytecode})
+  try {
+    let [abis, bytecode] = await compileContract(contractName)
+    globalAbis = abis
+    return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
+  } catch (e) {
+    console.log(e)
+    return res.status(500).send({ error: e })
+  }
 })
 
 app.get('/balances', async (req, res) => {
@@ -135,7 +139,7 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
-      console.log(callFunctionString);
+      console.log(callFunctionString)
 
       const functionResult = await eval(callFunctionString)
 
@@ -154,12 +158,15 @@ app.listen(PORT, () => {
 })
 
 async function compileContract(file) {
-  try { 
+  try {
     var input = {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(path.resolve(__dirname, file), 'utf8'),
+          content: fs.readFileSync(
+            path.resolve(__dirname, 'contracts', file),
+            'utf8',
+          ),
         },
       },
       settings: {
@@ -170,20 +177,21 @@ async function compileContract(file) {
         },
       },
     }
-  
+
     var output = JSON.parse(
-      solc.compile(JSON.stringify(input), { import: findImports })
-    );
-  
+      solc.compile(JSON.stringify(input), { import: findImports }),
+    )
+
     let abis = {}
     let byteCodes = {}
-  
+
     // `output` here contains the JSON output as specified in the documentation
     for (var contractName in output.contracts[file]) {
       abis[contractName] = output.contracts[file][contractName].abi
-      byteCodes[contractName] = output.contracts[file][contractName].evm.bytecode.object
+      byteCodes[contractName] =
+        output.contracts[file][contractName].evm.bytecode.object
     }
-  
+
     return [abis, byteCodes]
   } catch (e) {
     throw new Error(`Couldn't compile contract ${file} because of error: ${e}`)
@@ -197,12 +205,15 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   let deploymentString = 'factory.deploy('
 
-  for (var currentIndex = 0; currentIndex < constructor.length; currentIndex++) {
-    let param = constructor[currentIndex][0];
-    let type = constructor[currentIndex][1]; 
+  for (
+    var currentIndex = 0;
+    currentIndex < constructor.length;
+    currentIndex++
+  ) {
+    let param = constructor[currentIndex][0]
+    let type = constructor[currentIndex][1]
 
-    if (type === 'string')
-      deploymentString += "'" + param + "'"
+    if (type === 'string') deploymentString += "'" + param + "'"
     else deploymentString += param
 
     // Add commas if there are multiple params
@@ -213,7 +224,7 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   deploymentString += ')'
 
-  console.log('b4 eval: ', deploymentString);
+  console.log('b4 eval: ', deploymentString)
 
   const contract = await eval(deploymentString)
   console.log('Deployed Contract')
@@ -282,30 +293,37 @@ async function fundUSDC(provider, wallet) {
   }
 }
 
-function findImports(path) { 
-  // Find the contract import in node_modules
-  let importInNodeModules = __dirname.split('/packages')[0] + '/node_modules/' + path;
+function findImports(filePath) {
+  try {
+    // Find the contract import in node_modules
+    let importInNodeModules = path.join(__dirname, '/node_modules/', filePath)
 
-  let filesInCurrentDir = fs.readdirSync(process.cwd()); 
+    let filesInCurrentDir = fs.readdirSync(path.join(__dirname, 'contracts'))
 
-  let file;
+    let file
 
-  // Import is another contract in the current directory
-  let fileIndex = filesInCurrentDir.findIndex(item => item === path); 
-  if (fileIndex !== -1) { 
-    file = fs.readFileSync(filesInCurrentDir[fileIndex]);
-  }
-  // Import is a file in the node_modules folder
-  else { 
-    file = fs.readFileSync(importInNodeModules); 
-  }
+    // Import is another contract in the current directory
+    let fileIndex = filesInCurrentDir.findIndex((item) => item === filePath)
 
-  return { 
-    contents: file.toString()
+    if (fileIndex !== -1) {
+      file = fs.readFileSync(
+        path.join(__dirname, 'contracts', filesInCurrentDir[fileIndex]),
+      )
+    }
+    // Import is a file in the node_modules folder
+    else {
+      file = fs.readFileSync(importInNodeModules)
+    }
+
+    return {
+      contents: file.toString(),
+    }
+  } catch (e) {
+    throw new Error(e.message)
   }
 }
 
-const dirPath = path.join(__dirname, '..', 'backend')
+const dirPath = path.join(__dirname, '..', 'contracts')
 chokidar
   .watch(`${dirPath}/**/*.sol`, {
     persistent: true,
@@ -313,20 +331,19 @@ chokidar
   })
   .on('all', async (event, path) => {
     if (event === 'change') {
-      try { 
-        console.log('WATCHING SOL FILE: ', event, path)
+      try {
+        console.log('Watching .sol file: ', event, path)
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path)
         let [factory, contract] = await deployContracts(abis, bytecode)
-  
+
         console.log(`Changes found in ${path}, redeployed contract`)
-  
+
         globalContract = contract
         globalAbis = abis
-      }
-      catch (e) { 
-        console.log("ERROR: ", e.toString()); 
+      } catch (e) {
+        console.log('Error deploying changed contracts: ', e.message)
       }
     }
   })
