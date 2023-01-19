@@ -4,9 +4,10 @@
   "description": "",
   "type": "module",
   "scripts": {
+    "preinstall": "node preinstall.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "esbuild ./src/App.jsx --bundle --outfile=./public/build/bundle.js",
-    "dev": "ENV=dev bun esbuildConfig.js",
+    "dev": "bun esbuildConfig.js",
     "network": "node ./network/startNetwork.cjs"
   },
   "bin": {
