@@ -90,15 +90,20 @@ app.get('/balances', async (req, res) => {
       usdc: usdc_balance,
     }
 
-    res.send(balances)
+    res.status(200).send(balances)
   } catch (e) {
     console.error(e.message)
+    res.status(500).send({ error: e })
   }
 })
 
 app.post('/fundUSDC', async (req, res) => {
-  const receipt = await fundUSDC(provider, wallet)
-  res.send(receipt)
+  try {
+    const receipt = await fundUSDC(provider, wallet)
+    res.status(200).send(receipt)
+  } catch (e) {
+    res.status(500).send({ error: e })
+  }
 })
 
 // Construct function from abi
