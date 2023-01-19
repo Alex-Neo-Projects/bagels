@@ -1,12 +1,8 @@
 #!/usr/bin/env node
-
 const { Worker } = require('worker_threads');
 const { kill } = require('process');
 const path = require('path');
-// const ora = require('ora');
-const { exec } = require('child_process');
 const open = require('open');
-const fs = require('fs');
 
 async function workerPromise(script) {
   return await new Promise((resolve, reject) => {
@@ -22,8 +18,6 @@ async function workerPromise(script) {
 }
 
 const children = []
-
-exec('http://localhost:3000')
 
 async function main() {
   try {
