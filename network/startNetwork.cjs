@@ -21,8 +21,7 @@ async function workerPromise(script) {
   })
 }
 
-const children = []
-
+let children = []
 async function main() {
   try {
     // Start Anvil
@@ -72,7 +71,10 @@ process.on('SIGINT', () => {
   console.log(`\nShutting down ${children.length} services`)
 
   if (children.length >= 1) {
-    children.forEach((child) => kill(child.toString()))
+    children.forEach((child) => {
+      kill(child, 'SIGTERM')
+    })
+    children = []
   }
 })
 
