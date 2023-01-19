@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>EsBuild x React</title>
+    <title>Bagel</title>
   </head>
   <body>
     <div id="root"></div>
-    <script src="./build/bundle.js"></script>
-    
+    <script src="./build/App.js"></script>
+    <!-- <link rel="stylesheet" href="./build/styles/App.css"> -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <!-- Listen to changes for live reloads -->
     <script>new EventSource('/esbuild').addEventListener('change', () => location.reload())</script>
   </body>

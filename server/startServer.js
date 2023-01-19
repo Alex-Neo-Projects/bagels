@@ -150,7 +150,7 @@ app.post('/executeTransaction', async (req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`Listening to server on PORT ${PORT}`)
+  // console.log(`Listening to server on PORT ${PORT}`)
 })
 
 async function compileContract(file) {

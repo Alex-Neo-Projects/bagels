@@ -4,10 +4,6 @@ import { parentPort } from 'worker_threads'
 async function main() {
   const anvilProcess = spawn(
     'anvil',
-    [
-      '--fork-url',
-      'https://eth-mainnet.g.alchemy.com/v2/YKOGR_zFYv0ouTsGab24VKwOm5w7k6QZ',
-    ],
     {
       shell: true,
     },

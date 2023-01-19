@@ -3,10 +3,11 @@ import * as esbuild from 'esbuild'
 let context = await esbuild.context({
   entryPoints: ['./src/App.jsx'],
   bundle: true,
-  outfile: './public/build/bundle.js',
+  minify: true,
+  outdir: './public/build',
 })
 
-console.log('Starting the server 🫡 \n'); 
+console.log('Starting bagel 🥯 \n'); 
 
 // exec('http-server')
 await context.watch();
@@ -17,4 +18,4 @@ let { host, port } = await context.serve({
   port: 9091
 })
 
-console.log(`UI on: http://127.0.0.1:${port}`);
+console.log(`http://127.0.0.1:${port}`);
