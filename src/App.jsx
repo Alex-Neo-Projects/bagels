@@ -1,24 +1,23 @@
-import * as React from 'react'
+import React from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createBrowserRouter,
   RouterProvider,
-  BrowserRouter,
+  Route,
+  createRoutesFromElements,
 } from 'react-router-dom'
-import Home from './routes/Home'
-import Contracts from './routes/Contracts'
+import Root from './Root'
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Home />,
-  },
-  {
-    path: '/contracts/:contractId',
-    element: <Contracts />,
+    element: <Root />,
+    children: [],
   },
 ])
 
 createRoot(document.getElementById('root')).render(
-  <RouterProvider router={router} />,
+  <React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>,
 )

@@ -30,7 +30,6 @@ export function killAnvil() {
 
 async function main() {
   const anvilProcess = startupAnvil()
-  
   anvilProcessGlobal = anvilProcess
 
   anvilProcess.stderr.on('data', (data) => {

@@ -44,7 +44,7 @@ const getFiles = (path) => {
 }
 app.get('/solidityFiles', async (req, res) => {
   try {
-    const files = fs.readdirSync(path.resolve(__dirname, 'contracts'))
+    const files = fs.readdirSync(path.join(__dirname, '..', 'contracts'))
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
@@ -81,13 +81,13 @@ app.get('/abi', async (req, res) => {
 })
 
 app.get('/balances', async (req, res) => {
+  console.log(wallet.address)
   try {
     const ether_balance = await checkEtherBalance(provider, wallet.address)
-    const usdc_balance = await checkUSDCBalance(provider, wallet.address)
+    // const usdc_balance = await checkUSDCBalance(provider, wallet.address) // only run this when forking is available
 
     let balances = {
       eth: ether_balance,
-      usdc: usdc_balance,
     }
 
     res.status(200).send(balances)
@@ -169,7 +169,7 @@ async function compileContract(file) {
       sources: {
         [file]: {
           content: fs.readFileSync(
-            path.resolve(__dirname, 'contracts', file),
+            path.resolve(__dirname, '..', 'contracts', file),
             'utf8',
           ),
         },
@@ -301,9 +301,9 @@ async function fundUSDC(provider, wallet) {
 function findImports(filePath) {
   try {
     // Find the contract import in node_modules
-    let importInNodeModules = path.join(__dirname, '/node_modules/', filePath)
+    let importInNodeModules = path.join(__dirname, '..', '/node_modules/', filePath)
 
-    let filesInCurrentDir = fs.readdirSync(path.join(__dirname, 'contracts'))
+    let filesInCurrentDir = fs.readdirSync(path.join(__dirname, '..', 'contracts'))
 
     let file
 
