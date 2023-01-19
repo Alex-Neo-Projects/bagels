@@ -72,7 +72,7 @@ process.on('SIGINT', () => {
   console.log(`\nShutting down ${children.length} services`)
 
   if (children.length >= 1) {
-    children.forEach((child) => kill(child))
+    children.forEach((child) => kill(child.toString()))
   }
 })
 
