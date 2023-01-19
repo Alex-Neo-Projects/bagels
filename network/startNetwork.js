@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 import { Worker } from 'worker_threads'
-import process from 'process'
+import process, { kill } from 'process'
 import open from 'open'
-import {
-  getFilepath,
-  getPathDirname,
-} from '../utils.js'
+import { getFilepath, getPathDirname } from '../utils.js'
 
 async function workerPromise(script) {
   return await new Promise((resolve, reject) => {

@@ -7,11 +7,11 @@
     "preinstall": "node preinstall.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "esbuild ./src/App.jsx --bundle --outfile=./public/build/bundle.js",
-    "dev": "npm run network && bun esbuildConfig.js",
-    "network": "node ./network/startNetwork.cjs"
+    "dev": "npm run network",
+    "network": "node ./network/startNetwork.js"
   },
   "bin": {
-    "bagels": "./network/startNetwork.cjs"
+    "bagels": "./network/startNetwork.js"
   },
   "author": "",
   "license": "ISC",

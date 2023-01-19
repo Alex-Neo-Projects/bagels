@@ -1,4 +1,3 @@
-import path from 'path'
 import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
@@ -6,6 +5,7 @@ import express from 'express'
 import { usdc_abi } from '../contracts/abis/usdc.js'
 import cors from 'cors'
 import chokidar from 'chokidar'
+import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -16,35 +16,21 @@ const wallet = new ethers.Wallet(
 const PORT = 9090
 
 const app = express()
-const __dirname = path.resolve()
 app.use(express.json())
 app.use(cors())
 
 let globalContract
+let globalAbis = {}
+let solidityFiles = []
 
-// Adding a server for ui tool
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
-let globalAbis = {}
-let solidityFiles = []
-
-const getFiles = (path) => {
-  if (fs.lstatSync(path).isDirectory()) {
-    fs.readdirSync(path).forEach((f) => {
-      getFiles(path + '/' + f)
-    })
-  } else if (path.endsWith('.sol')) {
-    console.log('pushing')
-    solidityFiles.push(path)
-  }
-
-  return solidityFiles
-}
 app.get('/solidityFiles', async (req, res) => {
   try {
-    const files = fs.readdirSync(path.join(__dirname, '..', 'contracts'))
+    let fileDir = getFilepath([getPathDirname(), 'contracts'])
+    const files = fs.readdirSync(fileDir)
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
@@ -57,12 +43,12 @@ app.post('/deployContract', async (req, res) => {
     const { abi, bytecode, constructor } = req.body
 
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
+
     globalContract = contract
 
-    return res.status(200).send('asdf')
+    return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
-    console.log('contract deployment error: ', e)
-
+    console.log('Contract deployment error: ', e)
     return res.status(500).send({ error: e })
   }
 })
@@ -81,10 +67,8 @@ app.get('/abi', async (req, res) => {
 })
 
 app.get('/balances', async (req, res) => {
-  console.log(wallet.address)
   try {
     const ether_balance = await checkEtherBalance(provider, wallet.address)
-    // const usdc_balance = await checkUSDCBalance(provider, wallet.address) // only run this when forking is available
 
     let balances = {
       eth: ether_balance,
@@ -93,15 +77,6 @@ app.get('/balances', async (req, res) => {
     res.status(200).send(balances)
   } catch (e) {
     console.error(e.message)
-    res.status(500).send({ error: e })
-  }
-})
-
-app.post('/fundUSDC', async (req, res) => {
-  try {
-    const receipt = await fundUSDC(provider, wallet)
-    res.status(200).send(receipt)
-  } catch (e) {
     res.status(500).send({ error: e })
   }
 })
@@ -121,7 +96,7 @@ app.post('/executeTransaction', async (req, res) => {
 
       // param[0] === value
       // param[1] === type
-      for (var paramIndex = 0; paramIndex < params.length; paramIndex++) {
+      for (let paramIndex = 0; paramIndex < params.length; paramIndex++) {
         // If it's a string, add quotation marks
         if (
           params[paramIndex][1] === 'string' ||
@@ -164,14 +139,12 @@ app.listen(PORT, () => {
 
 async function compileContract(file) {
   try {
-    var input = {
+    let filePath = getFilepath([getPathDirname(), 'contracts', file])
+    let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(
-            path.resolve(__dirname, '..', 'contracts', file),
-            'utf8',
-          ),
+          content: fs.readFileSync(filePath, 'utf8'),
         },
       },
       settings: {
@@ -183,7 +156,7 @@ async function compileContract(file) {
       },
     }
 
-    var output = JSON.parse(
+    let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
 
@@ -191,7 +164,7 @@ async function compileContract(file) {
     let byteCodes = {}
 
     // `output` here contains the JSON output as specified in the documentation
-    for (var contractName in output.contracts[file]) {
+    for (let contractName in output.contracts[file]) {
       abis[contractName] = output.contracts[file][contractName].abi
       byteCodes[contractName] =
         output.contracts[file][contractName].evm.bytecode.object
@@ -248,62 +221,17 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
-async function checkUSDCBalance(provider, address) {
-  const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-
-  try {
-    const contract = new ethers.Contract(tokenAddress, usdc_abi, provider)
-    const usdcBalance = await contract.balanceOf(address)
-    const decimal = 10 ** 6
-    const formatBalance = (usdcBalance / decimal).toString()
-
-    return formatBalance
-  } catch (e) {
-    throw new Error(e.message)
-  }
-}
-
-async function fundUSDC(provider, wallet) {
-  const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-  const abi = usdc_abi
-  try {
-    let contract = new ethers.Contract(tokenAddress, abi, provider)
-
-    const masterMinter = await contract.masterMinter()
-    const masterMinter_signer = await provider.getSigner(masterMinter)
-
-    await provider.send('hardhat_setBalance', [
-      masterMinter,
-      ethers.utils.parseEther('1.0').toHexString().replace('0x0', '0x'),
-    ])
-
-    await provider.send('anvil_impersonateAccount', [masterMinter])
-
-    let c_tx = await contract
-      .connect(masterMinter_signer)
-      .configureMinter(wallet.address, 1000000000, {
-        from: masterMinter,
-        gasLimit: 300000,
-      })
-    let receipt = await c_tx.wait()
-
-    const amount = ethers.utils.parseUnits('100', 6)
-    const mint = await contract.connect(wallet).mint(wallet.address, amount, {
-      from: wallet.address,
-    })
-    let mint_receipt = await mint.wait()
-    return mint_receipt
-  } catch (e) {
-    throw new Error(e.message)
-  }
-}
-
 function findImports(filePath) {
   try {
     // Find the contract import in node_modules
-    let importInNodeModules = path.join(__dirname, '..', '/node_modules/', filePath)
-
-    let filesInCurrentDir = fs.readdirSync(path.join(__dirname, '..', 'contracts'))
+    let importInNodeModules = getFilepath([
+      getPathDirname(),
+      'node_modules',
+      filePath,
+    ])
+    let filesInCurrentDir = fs.readdirSync(
+      getFilepath([getPathDirname(), 'contracts']),
+    )
 
     let file
 
@@ -311,9 +239,12 @@ function findImports(filePath) {
     let fileIndex = filesInCurrentDir.findIndex((item) => item === filePath)
 
     if (fileIndex !== -1) {
-      file = fs.readFileSync(
-        path.join(__dirname, 'contracts', filesInCurrentDir[fileIndex]),
-      )
+      let contractFilePath = getFilepath([
+        getPathDirname(),
+        'contracts',
+        filesInCurrentDir[fileIndex],
+      ])
+      file = fs.readFileSync(contractFilePath)
     }
     // Import is a file in the node_modules folder
     else {
@@ -328,7 +259,7 @@ function findImports(filePath) {
   }
 }
 
-const dirPath = path.join(__dirname, '..', 'contracts')
+const dirPath = getPathDirname()
 chokidar
   .watch(`${dirPath}/**/*.sol`, {
     persistent: true,
