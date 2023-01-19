@@ -1,5 +1,5 @@
 import * as React from 'react'; 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 
 export default function Index() {
   const [count, setCount] = useState(0);
