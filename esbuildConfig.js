@@ -1,10 +1,12 @@
-import * as esbuild from 'esbuild'
+import esbuild from 'esbuild'
 
 let context = await esbuild.context({
   entryPoints: ['./src/App.jsx'],
   bundle: true,
   minify: true,
-  outdir: './public/build',
+  outfile: './public/build/bundle.js',
+  jsx: 'automatic',
+  loader: { '.js': 'jsx', '.eot': 'file', '.ttf': 'file', '.woff': 'file', '.woff2': 'file' }
 })
 
 console.log('Starting bagel 🥯 \n'); 

@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Stardom-Regular';
+  src: url('../../public/fonts/Stardom-Regular.woff2') format('woff2'),
+    url('../../public/fonts/Stardom-Regular.woff') format('woff'),
+    url('../../public/fonts/Stardom-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-Variable';
+  src: url('../../public/fonts/Supreme-Variable.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Variable.woff') format('woff'),
+    url('../../public/fonts/Supreme-Variable.ttf') format('truetype');
+  font-weight: 100 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-VariableItalic';
+  src: url('../../public/fonts/Supreme-VariableItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-VariableItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-VariableItalic.ttf') format('truetype');
+  font-weight: 100 800;
+  font-display: swap;
+  font-style: italic;
+}
+
+
+@font-face {
+  font-family: 'Supreme-Thin';
+  src: url('../../public/fonts/Supreme-Thin.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Thin.woff') format('woff'),
+    url('../../public/fonts/Supreme-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-display: swap;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'Supreme-ThinItalic';
+  src: url('../../public/fonts/Supreme-ThinItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-ThinItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-ThinItalic.ttf') format('truetype');
+  font-weight: 100;
+  font-display: swap;
+  font-style: italic;
+}
+
+
+@font-face {
+  font-family: 'Supreme-Extralight';
+  src: url('../../public/fonts/Supreme-Extralight.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Extralight.woff') format('woff'),
+    url('../../public/fonts/Supreme-Extralight.ttf') format('truetype');
+  font-weight: 200;
+  font-display: swap;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'Supreme-ExtralightItalic';
+  src: url('../../public/fonts/Supreme-ExtralightItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-ExtralightItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-ExtralightItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-display: swap;
+  font-style: italic;
+}
+
+
+@font-face {
+  font-family: 'Supreme-Light';
+  src: url('../../public/fonts/Supreme-Light.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Light.woff') format('woff'),
+    url('../../public/fonts/Supreme-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-display: swap;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'Supreme-LightItalic';
+  src: url('../../public/fonts/Supreme-LightItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-LightItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-LightItalic.ttf') format('truetype');
+  font-weight: 300;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Supreme-Regular';
+  src: url('../../public/fonts/Supreme-Regular.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Regular.woff') format('woff'),
+    url('../../public/fonts/Supreme-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-Italic';
+  src: url('../../public/fonts/Supreme-Italic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Italic.woff') format('woff'),
+    url('../../public/fonts/Supreme-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Supreme-Medium';
+  src: url('../../public/fonts/Supreme-Medium.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Medium.woff') format('woff'),
+    url('../../public/fonts/Supreme-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-MediumItalic';
+  src: url('../../public/fonts/Supreme-MediumItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-MediumItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-MediumItalic.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Supreme-Bold';
+  src: url('../../public/fonts/Supreme-Bold.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Bold.woff') format('woff'),
+    url('../../public/fonts/Supreme-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-BoldItalic';
+  src: url('../../public/fonts/Supreme-BoldItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-BoldItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: 'Supreme-Extrabold';
+  src: url('../../public/fonts/Supreme-Extrabold.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-Extrabold.woff') format('woff'),
+    url('../../public/fonts/Supreme-Extrabold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Supreme-ExtraboldItalic';
+  src: url('../../public/fonts/Supreme-ExtraboldItalic.woff2') format('woff2'),
+    url('../../public/fonts/Supreme-ExtraboldItalic.woff') format('woff'),
+    url('../../public/fonts/Supreme-ExtraboldItalic.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+  font-style: italic;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+@layer base {
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

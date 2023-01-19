@@ -1,7 +1,8 @@
 import * as React from 'react'; 
 import { createRoot } from 'react-dom/client'; 
-import Index from './Index';
+import './styles/globals.css'
+import Home from './Home';
 
-let App = () => <Index />
+let App = () => <Home />
 
 createRoot(document.getElementById('root')).render(<App />);
