@@ -10,9 +10,7 @@ export default function Home() {
     async function loadBasics() {
       setLoading(true)
       await getSolidityFiles()
-      setTimeout(() => {
-        setLoading(false)
-      }, 100)
+      setLoading(false)
     }
 
     loadBasics()
