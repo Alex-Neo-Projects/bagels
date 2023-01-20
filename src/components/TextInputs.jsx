@@ -150,7 +150,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
 
         {val.stateMutability === 'payable' && (
           <input
-            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-white outline-none text-md"
+            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#3C424210] outline-none text-md"
             type={'text'}
             placeholder={'Enter an amount (ETH)'}
             onInput={(e) => setAmount(parseFloat(e.target.value))}
