@@ -14,6 +14,9 @@ export function startupAnvil(network = '') {
     ]
   }
 
+  // args.push('-b')
+  // args.push('1')
+
   const res = spawn('anvil', args, {
     shell: true,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],

@@ -15,10 +15,6 @@ export default function Contracts({ contractName }) {
   const [listening, setListening] = useState(false)
 
   useEffect(() => {
-    init()
-  }, [])
-
-  useEffect(() => {
     if (!listening) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
 
@@ -71,8 +67,6 @@ export default function Contracts({ contractName }) {
   async function TextInputDeployContract(constructor) {
     await deployContract(abiState, bytecodeState, constructor)
     setConstructorDeployed(true)
-
-    console.log('after text input')
   }
 
   async function deployContract(abi, bytecode, constructor) {
@@ -88,11 +82,11 @@ export default function Contracts({ contractName }) {
       }),
     })
 
-    if (deployment.status !== 200) {
-      console.log('ERROR DEPLOYING THE CONTRACT!!!!')
-    }
+    const deploymentParsed = await deployment.json()
 
-    console.log('after deploy contract')
+    if (deployment.status !== 200) {
+      console.log(deploymentParsed.error)
+    }
   }
 
   async function getABI() {
@@ -164,98 +158,111 @@ export default function Contracts({ contractName }) {
 
   return (
     <Header>
-      {!abiState || !balances ? (
-        <div className="mt-2 mb-2 max-w-lg space-y-6">
-          <p>loading</p>
-        </div>
-      ) : // Show constructor inputs if a valid constructor is found
-      constructorIndex > -1 && !constructorDeployed ? (
-        <div>
-          <p>Enter constructors</p>
-          <TextInputs
-            val={abiState[contractNameState][constructorIndex]}
-            idxOne={0}
-            getBalance={getBalance}
-            deployContract={TextInputDeployContract}
-          />
-        </div>
-      ) : (
-        <div className="mt-2 mb-2 max-w-lg space-y-6">
-          <div className="flex">
-            <a href="/">
-              <img
-                className="mr-2 pt-1"
-                src="https://cdn-icons-png.flaticon.com/512/93/93634.png"
-                height={10}
-                width={35}
-              />
-            </a>
-            <p className="text-4xl font-bold">
-              Contract {contractNameState || ''}
-            </p>
-          </div>
-          <div>
-            <p className="text-xl font-medium">
-              Connected to wallet with address:{' '}
-            </p>
-            <p className="text-sm">
-              0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
-            </p>
-            <p className="text-xl font-medium pt-4">Private key: </p>
-            <p className="text-sm">
-              0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-            </p>
-          </div>
+      <div className="flex flex-col w-full justify-center items-center space-y-10 overflow-auto">
+        <div className="flex w-screen max-w-[40em]">
+          <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            {!abiState ||
+              (!balances && (
+                <div className="mt-2 mb-2 max-w-lg space-y-6">
+                  <p className="text-xl tracking-tighter text-left font-bold">
+                    Loading {contractName}
+                  </p>
+                </div>
+              ))}
 
-          <div>
-            <p className="text-xl font-bold">Address Balance</p>
-            <div className="mt-1">
-              {Object.entries(balances.balances).map(([name, value], idx) => {
-                return (
-                  <div key={idx.toString()}>
-                    <p className="text-md">
-                      {name}: {value}
+            {constructorIndex > -1 && !constructorDeployed ? (
+              <div>
+                <p>Enter constructors</p>
+                <TextInputs
+                  val={abiState[contractNameState][constructorIndex]}
+                  idxOne={0}
+                  getBalance={getBalance}
+                  deployContract={TextInputDeployContract}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col justify-start space-y-4">
+                <div className="flex justify-start items-center">
+                  <div>
+                    <a href="/">
+                      <img
+                        className="justify-center items-center"
+                        src="https://cdn-icons-png.flaticon.com/512/93/93634.png"
+                        height={25}
+                        width={25}
+                      />
+                    </a>
+                  </div>
+
+                  <div className="pl-4">
+                    <h1 className="text-xl tracking-tighter text-left font-bold">
+                      Contract {contractNameState || ''}
+                    </h1>
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-xl font-medium">
+                      Connected to wallet with address:
+                    </p>
+                    <p className="text-sm">
+                      0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
                     </p>
                   </div>
-                )
-              })}
-            </div>
-          </div>
 
-          <div>
-            <p className="text-xl font-bold">ABI</p>
+                  <div className="space-y-1">
+                    <p className="text-xl font-medium">Private key: </p>
+                    <p className="text-sm">
+                      0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+                    </p>
+                  </div>
+                </div>
 
-            <div className="flex flex-col space-y-2">
-              {abiState[contractNameState]
-                .sort((a, b) => {
-                  if (a.stateMutability === 'view') {
-                    return -1
-                  }
-                  if (b.stateMutability === 'view') {
-                    return 1
-                  }
-                  return 0
-                })
-                .map((val, idx) => {
-                  return (
-                    <div key={idx.toString()}>
-                      <p className="text-md font-bold mt-2">
-                        {renderFunctionHeader(val)}
-                      </p>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-xl font-medium">Address Balance</p>
+                  <p className="text-md">eth: {balances?.balances?.eth}</p>
+                </div>
 
-                      <TextInputs
-                        val={val}
-                        idxOne={idx}
-                        getBalance={getBalance}
-                        deployContract={TextInputDeployContract}
-                      />
-                    </div>
-                  )
-                })}
-            </div>
+                <div className="flex flex-col">
+                  <p className="text-xl font-medium">ABI</p>
+
+                  <div className="flex flex-col space-y-2">
+                    {abiState &&
+                      contractNameState &&
+                      abiState[contractNameState]
+                        .sort((a, b) => {
+                          if (a.stateMutability === 'view') {
+                            return -1
+                          }
+                          if (b.stateMutability === 'view') {
+                            return 1
+                          }
+                          return 0
+                        })
+                        .map((val, idx) => {
+                          return (
+                            <div key={idx.toString()}>
+                              <p className="text-md font-bold mt-2">
+                                {renderFunctionHeader(val)}
+                              </p>
+
+                              <TextInputs
+                                val={val}
+                                idxOne={idx}
+                                getBalance={getBalance}
+                                deployContract={TextInputDeployContract}
+                              />
+                            </div>
+                          )
+                        })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </Header>
   )
 }
