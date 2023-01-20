@@ -6,6 +6,14 @@ export default function Home() {
   const [solidityFiles, setSolidityFiles] = useState([]); 
   const [loading, setLoading] = useState(true); 
 
+  useEffect(() => {
+    async function loadBasics() { 
+      await getSolidityFiles(); 
+      setLoading(false);
+    }
+    loadBasics();
+  }, [])
+
   async function getSolidityFiles() { 
     const result = await fetch(`${SERVER_URL}/solidityFiles`, {
       method: 'GET', 
@@ -15,14 +23,6 @@ export default function Home() {
 
     setSolidityFiles(jsonifiedResult['files']); 
   }
-
-  useEffect(() => {
-    async function loadBasics() { 
-      await getSolidityFiles(); 
-      setLoading(false);
-    }
-    loadBasics();
-  }, [])
 
   const solidityFileChoices = solidityFiles.map((item) => {
     return ( 
