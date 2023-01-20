@@ -171,8 +171,8 @@ export default function Contracts({ contractName }) {
               ))}
 
             {constructorIndex > -1 && !constructorDeployed ? (
-              <div>
-                <p>Enter constructors</p>
+              <div className="flex flex-col justify-start space-y-4">
+                <p className="text-xl font-medium">Enter constructors:</p>
                 <TextInputs
                   val={abiState[contractNameState][constructorIndex]}
                   idxOne={0}
@@ -220,12 +220,12 @@ export default function Contracts({ contractName }) {
                 </div>
 
                 <div className="flex flex-col space-y-1">
-                  <p className="text-xl font-medium">Address Balance</p>
+                  <p className="text-xl font-medium">Address Balance:</p>
                   <p className="text-md">eth: {balances?.balances?.eth}</p>
                 </div>
 
                 <div className="flex flex-col">
-                  <p className="text-xl font-medium">ABI</p>
+                  <p className="text-xl font-medium">ABI:</p>
 
                   <div className="flex flex-col space-y-2">
                     {abiState &&
