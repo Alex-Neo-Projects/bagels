@@ -119,11 +119,13 @@ app.post('/executeTransaction', async (req, res) => {
 
       // payable functions
       if (stateMutability === 'payable' && amount > 0) {
-        callFunctionString += `{value: ethers.utils.parseEther("${amount}")}`
+        callFunctionString += `${
+          params.length === 0 ? '' : ','
+        }{value: ethers.utils.parseEther("${amount}")}`
       }
       callFunctionString += ')'
 
-      console.log(callFunctionString)
+      // console.log(callFunctionString)
 
       const functionResult = await eval(callFunctionString)
 
