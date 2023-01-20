@@ -31,4 +31,3 @@ The goal of bagel is to make going from **idea ➡️ prototype with smart contr
 2) `cd bagels`
 3) `bun i`
 4) `bun run dev`
-

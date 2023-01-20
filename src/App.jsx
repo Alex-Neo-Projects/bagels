@@ -1,22 +1,16 @@
 import * as React from 'react'; 
 import { createRoot } from 'react-dom/client'; 
-import './styles/globals.css'
-import Home from './pages/Home';
-import { Link, Route } from "wouter";
+import { Route } from "wouter";
+import Home from './pages/Home'; 
 import Contracts from './pages/Contracts';
+import './styles/globals.css'
 
 let App = () => (
   <div>
-    <Link href="/users/1">
-      <a className="link">Profile</a>
-    </Link>
-
-    <Route path="/users/:name">{(params) => <div>Hello, {params.name}!</div>}</Route>
-
-    <Route path='/' component={Home}/>
-    <Route path='/asdf' component={Contracts} />
+    <Route path="/contracts/:contract">{(params) => <Contracts contractName={params.contract}/>}</Route>
+    <Route path="/" component={Home} />
   </div>
 )
-// let App = () => <Home />
+
 
 createRoot(document.getElementById('root')).render(<App />);

@@ -3,7 +3,7 @@ import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
-import { usdc_abi } from './abis/usdc.js'
+// import { usdc_abi } from './abis/usdc.js'
 import cors from 'cors'
 import chokidar from 'chokidar'
 
@@ -79,22 +79,15 @@ app.get('/abi', async (req, res) => {
 app.get('/balances', async (req, res) => {
   try {
     const ether_balance = await checkEtherBalance(provider, wallet.address)
-    const usdc_balance = await checkUSDCBalance(provider, wallet.address)
 
     let balances = {
       eth: ether_balance,
-      usdc: usdc_balance,
     }
 
     res.send(balances)
   } catch (e) {
     console.error(e.message)
   }
-})
-
-app.post('/fundUSDC', async (req, res) => {
-  const receipt = await fundUSDC(provider, wallet)
-  res.send(receipt)
 })
 
 // Construct function from abi
@@ -149,9 +142,7 @@ app.post('/executeTransaction', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  // console.log(`Listening to server on PORT ${PORT}`)
-})
+app.listen(PORT)
 
 async function compileContract(file) {
   try { 
@@ -232,55 +223,55 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
-async function checkUSDCBalance(provider, address) {
-  const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+// async function checkUSDCBalance(provider, address) {
+//   const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
 
-  try {
-    const contract = new ethers.Contract(tokenAddress, usdc_abi, provider)
-    const usdcBalance = await contract.balanceOf(address)
-    const decimal = 10 ** 6
-    const formatBalance = (usdcBalance / decimal).toString()
+//   try {
+//     const contract = new ethers.Contract(tokenAddress, usdc_abi, provider)
+//     const usdcBalance = await contract.balanceOf(address)
+//     const decimal = 10 ** 6
+//     const formatBalance = (usdcBalance / decimal).toString()
 
-    return formatBalance
-  } catch (e) {
-    throw new Error(e.message)
-  }
-}
+//     return formatBalance
+//   } catch (e) {
+//     throw new Error(e.message)
+//   }
+// }
 
-async function fundUSDC(provider, wallet) {
-  const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-  const abi = usdc_abi
-  try {
-    let contract = new ethers.Contract(tokenAddress, abi, provider)
+// async function fundUSDC(provider, wallet) {
+//   const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+//   const abi = usdc_abi
+//   try {
+//     let contract = new ethers.Contract(tokenAddress, abi, provider)
 
-    const masterMinter = await contract.masterMinter()
-    const masterMinter_signer = await provider.getSigner(masterMinter)
+//     const masterMinter = await contract.masterMinter()
+//     const masterMinter_signer = await provider.getSigner(masterMinter)
 
-    await provider.send('hardhat_setBalance', [
-      masterMinter,
-      ethers.utils.parseEther('1.0').toHexString().replace('0x0', '0x'),
-    ])
+//     await provider.send('hardhat_setBalance', [
+//       masterMinter,
+//       ethers.utils.parseEther('1.0').toHexString().replace('0x0', '0x'),
+//     ])
 
-    await provider.send('anvil_impersonateAccount', [masterMinter])
+//     await provider.send('anvil_impersonateAccount', [masterMinter])
 
-    let c_tx = await contract
-      .connect(masterMinter_signer)
-      .configureMinter(wallet.address, 1000000000, {
-        from: masterMinter,
-        gasLimit: 300000,
-      })
-    let receipt = await c_tx.wait()
+//     let c_tx = await contract
+//       .connect(masterMinter_signer)
+//       .configureMinter(wallet.address, 1000000000, {
+//         from: masterMinter,
+//         gasLimit: 300000,
+//       })
+//     let receipt = await c_tx.wait()
 
-    const amount = ethers.utils.parseUnits('100', 6)
-    const mint = await contract.connect(wallet).mint(wallet.address, amount, {
-      from: wallet.address,
-    })
-    let mint_receipt = await mint.wait()
-    return mint_receipt
-  } catch (e) {
-    throw new Error(e.message)
-  }
-}
+//     const amount = ethers.utils.parseUnits('100', 6)
+//     const mint = await contract.connect(wallet).mint(wallet.address, amount, {
+//       from: wallet.address,
+//     })
+//     let mint_receipt = await mint.wait()
+//     return mint_receipt
+//   } catch (e) {
+//     throw new Error(e.message)
+//   }
+// }
 
 function findImports(path) { 
   // Find the contract import in node_modules
