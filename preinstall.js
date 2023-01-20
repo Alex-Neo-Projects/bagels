@@ -1,7 +1,9 @@
 import { spawn } from 'child_process'
 
 async function main() {
+  // TODO: Check if the user already has forge & bun installed b4 reinstalling.
   try {
+    console.log('installing forge & bun...')
     spawn(
       'curl',
       [

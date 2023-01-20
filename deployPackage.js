@@ -25,16 +25,16 @@ function main() {
   
   updatePackageNumber(); 
   
-  console.log('npm remove'); 
+  console.log('bun remove'); 
 
-  execSync('npm remove -g test-bagels')
+  execSync('bun remove -g bagels')
 
   console.log('publish');
 
   execSync('npm publish');
   
-  console.log('install')
-  execSync('npm i -g test-bagels')
+  console.log('bun install')
+  execSync('bun i -g bagels')
   
   console.timeEnd('done installing 🥯')
 }

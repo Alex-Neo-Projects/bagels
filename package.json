@@ -1,6 +1,6 @@
 {
   "name": "bagels",
-  "version": "0.0.24",
+  "version": "0.0.34",
   "description": "",
   "type": "module",
   "files": [
@@ -13,11 +13,10 @@
     "./utils.js"
   ],
   "scripts": {
-    "preinstall": "node preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.js",
-    "siteEsBuild": "bun esbuildConfig.js ",
+    "siteEsBuild": "bun esbuildConfig.js",
     "site": "npm-run-all --parallel siteEsBuild tailwind",
     "dev": "npm-run-all --parallel network tailwind"
   },
@@ -30,6 +29,7 @@
     "npm-run-all": "^4.1.5"
   },
   "dependencies": {
+    "chalk": "^5.2.0",
     "chokidar": "^3.5.3",
     "cors": "^2.8.5",
     "esbuild": "^0.17.3",
