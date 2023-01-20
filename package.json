@@ -1,10 +1,14 @@
 {
   "name": "bagels",
-  "version": "0.0.6",
+  "version": "0.0.18",
   "description": "",
   "type": "module",
   "files": [
-    "./public/build/**"
+    "./public/**",
+    "./server/**",
+    "./src/**",
+    "./network/**",
+    "./esbuildConfig.js"
   ],
   "scripts": {
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",

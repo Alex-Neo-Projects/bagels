@@ -19,6 +19,8 @@ async function workerPromise(script) {
 
 const children = []
 
+console.log('within start network: ', process.cwd());
+
 async function main() {
   try {
     // Start Anvil

@@ -9,7 +9,7 @@ With Bagel you can:
 - Interact with your contracts via the UI 
 - Instantly see contract changes via the UI
 
-The goal of bagel is to make going from **idea ➡️ prototype with smart contracts just as fast, convenient, and fun as making a website**
+**The goal of bagel is to make going from idea ➡️ prototype with smart contracts just as fast, convenient, and fun as making a website**
 
 #### Installation setup:
 1) `npm i -g bagels` or `yarn add global bagels` or `bun -g i bagels`

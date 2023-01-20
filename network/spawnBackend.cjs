@@ -7,7 +7,7 @@ async function main() {
 
   let serverDir = path.join(bagelsScriptPath, '..', 'server')
 
-  const nodeProcess = spawn('node', ['startServer.js'], {
+  const nodeProcess = spawn('node', ['startServer.js', process.cwd()], {
     cwd: serverDir,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   })

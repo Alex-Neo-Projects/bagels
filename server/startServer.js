@@ -13,10 +13,13 @@ const wallet = new ethers.Wallet(
   provider,
 )
 
+// Need to pass it in because process.cwd() after this is ran from the worker prints the location of the bagels package on the user's computer
+// So we pass in the directory the user is calling bagel from
+const userRealDirectory = process.argv[2]
+
 const PORT = 9090
 
 const app = express()
-const __dirname = path.resolve()
 app.use(express.json())
 app.use(cors())
 
@@ -44,7 +47,7 @@ const getFiles = (path) => {
 }
 
 app.get('/solidityFiles', async (req, res) => {
-  const files = fs.readdirSync(__dirname)
+  const files = fs.readdirSync(userRealDirectory)
 
   var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
 
@@ -150,7 +153,7 @@ async function compileContract(file) {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(path.resolve(__dirname, file), 'utf8'),
+          content: fs.readFileSync(path.resolve(userRealDirectory, file), 'utf8'),
         },
       },
       settings: {
@@ -275,9 +278,9 @@ async function checkEtherBalance(provider, address) {
 
 function findImports(path) { 
   // Find the contract import in node_modules
-  let importInNodeModules = __dirname.split('/packages')[0] + '/node_modules/' + path;
+  // let importInNodeModules = .split('/packages')[0] + '/node_modules/' + path;
 
-  let filesInCurrentDir = fs.readdirSync(process.cwd()); 
+  let filesInCurrentDir = fs.readdirSync(userRealDirectory);
 
   let file;
 
@@ -287,20 +290,19 @@ function findImports(path) {
     file = fs.readFileSync(filesInCurrentDir[fileIndex]);
   }
   // Import is a file in the node_modules folder
-  else { 
-    file = fs.readFileSync(importInNodeModules); 
-  }
+  // else { 
+  //   file = fs.readFileSync(importInNodeModules); 
+  // }
 
   return { 
     contents: file.toString()
   }
 }
 
-const dirPath = path.join(__dirname, '..', 'backend')
 chokidar
-  .watch(`${dirPath}/**/*.sol`, {
+  .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
-    cwd: dirPath,
+    cwd: userRealDirectory,
   })
   .on('all', async (event, path) => {
     if (event === 'change') {
