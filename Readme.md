@@ -41,8 +41,6 @@ bun -g i bagels
 2) `cd bagels`
 3) `bun i`
 4) `bun run dev`
-<<<<<<< HEAD
-=======
 
 #### Things to look out for: 
 1) If the Anvil process fails to close, try running these commands: 
@@ -52,4 +50,3 @@ bun -g i bagels
 2) The following steps above can be applied for the backend and frontend process. Just replace the 8545 port number with the one that's failing to close.
    1) backed port: 9090 
    2) frontend port: 9091
->>>>>>> main
