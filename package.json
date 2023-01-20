@@ -1,6 +1,6 @@
 {
   "name": "bagels",
-  "version": "0.0.18",
+  "version": "0.0.24",
   "description": "",
   "type": "module",
   "files": [
@@ -8,7 +8,9 @@
     "./server/**",
     "./src/**",
     "./network/**",
-    "./esbuildConfig.js"
+    "./esbuildConfig.js",
+    "./preinstall.js",
+    "./utils.js"
   ],
   "scripts": {
     "preinstall": "node preinstall.js",
