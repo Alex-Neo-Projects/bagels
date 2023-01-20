@@ -1,9 +1,11 @@
 {
   "name": "bagels",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "description": "",
   "type": "module",
-  "files": ["./public/build/**"],
+  "files": [
+    "./public/build/**"
+  ],
   "scripts": {
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",

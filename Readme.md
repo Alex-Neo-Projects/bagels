@@ -1,4 +1,4 @@
-![codename bagel](./assets/banner.png)
+![codename bagel](https://github.com/Alex-Neo-Projects/bagels/blob/main/assets/banner.png)
 
 ## codename bagel 🥯
 
