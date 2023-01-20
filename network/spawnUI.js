@@ -6,7 +6,7 @@ import { getFilepath, getPathDirname } from '../utils.js'
 async function main() {
   const esBuildDir = getFilepath([getPathDirname()])
 
-  const uiProcess = spawn('bun', ['esbuildConfig.js'], {
+  const uiProcess = spawn('node', ['esbuildConfig.js'], {
     cwd: esBuildDir,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   })

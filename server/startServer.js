@@ -4,6 +4,7 @@ import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
+import path from 'path'
 import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -22,6 +23,7 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
+let client
 let globalContract
 let globalAbis = {}
 let solidityFiles = []
@@ -84,7 +86,6 @@ app.get('/balances', async (req, res) => {
   }
 })
 
-// Construct function from abi
 app.post('/executeTransaction', async (req, res) => {
   const { functionName, params, stateMutability, amount } = req.body
 
@@ -136,6 +137,28 @@ app.post('/executeTransaction', async (req, res) => {
   }
 })
 
+app.get('/subscribeToChanges', async (req, res) => {
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    Connection: 'keep-alive',
+    'Cache-Control': 'no-cache',
+  }
+  res.writeHead(200, headers)
+  res.write('data: {"msg": "redeployed"}\n\n')
+
+  client = res
+
+  req.on('close', () => {
+    console.log(`Connection closed`)
+    client = null
+  })
+})
+
+app.post('/test', (req, res) => {
+  refreshFrontend()
+  res.send(200)
+})
+
 app.listen(PORT)
 
 async function compileContract(file) {
@@ -144,7 +167,10 @@ async function compileContract(file) {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(path.resolve(userRealDirectory, file), 'utf8'),
+          content: fs.readFileSync(
+            path.resolve(userRealDirectory, file),
+            'utf8',
+          ),
         },
       },
       settings: {
@@ -259,6 +285,11 @@ function findImports(filePath) {
   }
 }
 
+function refreshFrontend() {
+  // send data to the client
+  client.write('data: {"msg": "redeployed"}\n\n')
+}
+
 chokidar
   .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
@@ -271,12 +302,14 @@ chokidar
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path)
-        let [factory, contract] = await deployContracts(abis, bytecode)
+        let [factory, contract] = await deployContracts(abis, bytecode, [])
 
         console.log(`Changes found in ${path}, redeployed contract`)
 
         globalContract = contract
         globalAbis = abis
+
+        refreshFrontend()
       } catch (e) {
         console.log('Error deploying changed contracts: ', e.message)
       }

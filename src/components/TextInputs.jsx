@@ -131,15 +131,18 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
   }
 
   return (
-    <div key={idxOne.toString()}>
-      <div>
+    <div
+      className="flex flex-col justify-between items-start space-y-1 h-full p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl"
+      key={idxOne.toString()}
+    >
+      <div className="flex flex-row justify-end w-full items-center space-x-4">
         {val.inputs.map((param, idx) => {
           return (
             <input
               key={idx.toString()}
+              className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#3C424210] outline-none text-md"
               type={'text'}
               placeholder={`${param.name} (${param.type})`}
-              onInput={(e) => {}}
               onChange={handleInputListChange.bind(this, [idx, param.type])}
             />
           )
@@ -147,6 +150,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
 
         {val.stateMutability === 'payable' && (
           <input
+            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-white outline-none text-md"
             type={'text'}
             placeholder={'Enter an amount (ETH)'}
             onInput={(e) => setAmount(parseFloat(e.target.value))}
@@ -154,6 +158,11 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
         )}
 
         <button
+          className={
+            val.inputs.length > 0
+              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
+              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
+          }
           onClick={async () => {
             // Clear outputs and errors
             clear()
@@ -177,22 +186,19 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
               return
             }
 
-            const res = await fetch(
-              `${SERVER_URL}/executeTransaction`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  functionName: val.name,
-                  params: inputs,
-                  stateMutability: val.stateMutability,
-                  type: val.type,
-                  amount: amount,
-                }),
+            const res = await fetch(`${SERVER_URL}/executeTransaction`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
               },
-            )
+              body: JSON.stringify({
+                functionName: val.name,
+                params: inputs,
+                stateMutability: val.stateMutability,
+                type: val.type,
+                amount: amount,
+              }),
+            })
 
             const jsonParsed = await res.json()
 
@@ -217,9 +223,9 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
         </button>
       </div>
 
-      <div>
+      <div className="flex flex-row justify-start w-full items-center">
         {executingTransaction ? (
-          <div>
+          <div className="flex flex-row justify-center items-center mt-2">
             <h2 className="text-sm font-bold">Loading</h2>
           </div>
         ) : null}
@@ -227,21 +233,21 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
 
       {output && (
         <div>
-          <p>{output}</p>
+          <p className="text-lg">{output}</p>
         </div>
       )}
 
       {error && (
         <div>
-          <p>Input Error:</p>
-          <p>{error}</p>
+          <p className="text-red-600">Input Error:</p>
+          <p className="text-red-600">{error}</p>
         </div>
       )}
 
       {executionError && (
-        <div>
-          <p>Error:</p>
-          <p>{executionError}</p>
+        <div className="overflow-hidden break-all">
+          <p className="text-red-600">Error:</p>
+          <p className="text-red-600">{executionError}</p>
         </div>
       )}
     </div>
