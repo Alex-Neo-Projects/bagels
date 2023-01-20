@@ -9,7 +9,7 @@ With Bagel you can:
 - Interact with your contracts via the UI 
 - Instantly see contract changes via the UI
 
-**The goal of bagel is to make going from idea ➡️ prototype with smart contracts just as fast, convenient, and fun as making a website**
+**The goal of bagel is to make writing and playing with smart contracts feel like a videogame**
 
 #### Installation setup:
 ```

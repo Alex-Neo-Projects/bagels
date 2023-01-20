@@ -34,19 +34,17 @@ async function updateBenchmarksFile(size) {
   });
 }
 
-async function measureSize() {
-  // execSync('bun i -g bagels');
+export async function measureSize() {
+  execSync('bun i -g bagels');
   
   const bagelsLocation = execSync('which bagels').toString().split('\n')[0];
   
-  // const packageSize = fs.statSync(bagelsLocation).size;
-  // const formattedSize = formatBytes(packageSize);
+  const packageSize = fs.statSync(bagelsLocation).size;
+  const formattedSize = formatBytes(packageSize);
   
-  // console.log('Install size: ', formattedSize); 
+  console.log('Installed size: ', formattedSize); 
   
-  // execSync('bun remove -g bagels');
+  execSync('bun remove -g bagels');
   
-  // updateBenchmarksFile(formattedSize);
+  updateBenchmarksFile(formattedSize);
 }
-
-measureSize();

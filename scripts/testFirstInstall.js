@@ -8,7 +8,7 @@ function convertToSeconds(milliseconds) {
   return milliseconds / 1000;
 }
 
-async function updateBenchmarksFile(yarnInstallTime, bunInstallTime, npmInstallTime) {
+async function updateBenchmarksFile(bunInstallTime, yarnInstallTime, npmInstallTime) {
   const packageJson = fs.readFileSync('../package.json')
 
   const jsonifiedPackageJson = await JSON.parse(packageJson);
@@ -104,15 +104,13 @@ function npmInstall() {
 export async function firstInstallTimes() { 
   console.time('totalTime')
   
-  console.time('UNinstalling 🥯 from bun, yarn, and npm')
   await Promise.all([bunUninstall(), yarnUninstall(), npmUninstall()]);
-  console.timeEnd('UNinstalling 🥯 from bun, yarn, and npm')
   
   // Install the package
   // (prints out the time result from within each promise)
   const [yarnInstallTime, npmInstallTime, bunInstallTime] = await Promise.all([yarnInstall(), npmInstall(), bunInstall()])
   
-  updateBenchmarksFile(yarnInstallTime, bunInstallTime, npmInstallTime); 
+  await updateBenchmarksFile(bunInstallTime, yarnInstallTime, npmInstallTime); 
   
   console.time('Cleaning up and UNinstalling 🥯')
   await Promise.all([bunUninstall(), yarnUninstall(), npmUninstall()]);
@@ -120,5 +118,3 @@ export async function firstInstallTimes() {
   
   console.timeEnd('totalTime')
 }
-
-firstInstallTimes();

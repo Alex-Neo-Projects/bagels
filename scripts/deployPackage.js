@@ -1,5 +1,7 @@
 import fs from 'fs'; 
 import { exec, execSync } from 'child_process'
+import { firstInstallTimes } from './testFirstInstall.js';
+import { measureSize } from './measureSize.js';
 
 async function updatePackageNumber() { 
   // Step 1: update the package # 
@@ -20,14 +22,15 @@ async function updatePackageNumber() {
   fs.writeFileSync('../package.json', JSON.stringify(jsonifiedPackageJson, null, 2));
 }
 
-function main() { 
-  console.time('done publishing 🥯')
+async function main() { 
+  updatePackageNumber();
   
-  updatePackageNumber(); 
-  
-  execSync('npm publish');
-  
-  console.timeEnd('done publishing 🥯')
+  console.time('Done publishing 🥯')
+  execSync('npm publish', { cwd: '../'});
+  console.timeEnd('Done publishing 🥯')
+
+  await firstInstallTimes();
+  await measureSize();
 }
 
 main();
