@@ -1,8 +1,15 @@
 {
   "name": "bagels",
-  "version": "0.0.1",
+  "version": "0.0.18",
   "description": "",
   "type": "module",
+  "files": [
+    "./public/**",
+    "./server/**",
+    "./src/**",
+    "./network/**",
+    "./esbuildConfig.js"
+  ],
   "scripts": {
     "preinstall": "node preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
@@ -29,7 +36,6 @@
     "open": "^8.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.7.0",
     "solc": "^0.8.17",
     "tailwindcss": "^3.2.4",
     "wouter": "2.9.1"

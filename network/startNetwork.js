@@ -18,6 +18,7 @@ async function workerPromise(script) {
 }
 
 let children = []
+
 async function main() {
   try {
     let filePaths = {

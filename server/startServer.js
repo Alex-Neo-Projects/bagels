@@ -12,6 +12,10 @@ const wallet = new ethers.Wallet(
   provider,
 )
 
+// Need to pass it in because process.cwd() after this is ran from the worker prints the location of the bagels package on the user's computer
+// So we pass in the directory the user is calling bagel from
+const userRealDirectory = process.argv[2]
+
 const PORT = 9090
 
 const app = express()
@@ -28,9 +32,9 @@ app.get('/', (req, res) => {
 
 app.get('/solidityFiles', async (req, res) => {
   try {
-    let fileDir = getFilepath([getPathDirname(), 'contracts'])
-    const files = fs.readdirSync(fileDir)
+    const files = fs.readdirSync(userRealDirectory)
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
     return res.status(500).send({ error: e })
@@ -132,18 +136,15 @@ app.post('/executeTransaction', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  // console.log(`Listening to server on PORT ${PORT}`)
-})
+app.listen(PORT)
 
 async function compileContract(file) {
   try {
-    let filePath = getFilepath([getPathDirname(), 'contracts', file])
     let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(filePath, 'utf8'),
+          content: fs.readFileSync(path.resolve(userRealDirectory, file), 'utf8'),
         },
       },
       settings: {
@@ -258,11 +259,10 @@ function findImports(filePath) {
   }
 }
 
-const dirPath = getPathDirname()
 chokidar
-  .watch(`${dirPath}/**/*.sol`, {
+  .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
-    cwd: dirPath,
+    cwd: userRealDirectory,
   })
   .on('all', async (event, path) => {
     if (event === 'change') {

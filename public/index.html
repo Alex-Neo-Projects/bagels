@@ -5,10 +5,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <base href="/">
+
     <script src="./build/bundle.js"></script>
     <link rel="stylesheet" type="text/css" href="./build/bundle.css">
 
     <link rel="stylesheet" type="text/css" href="./build/output.css">
+
     <!-- Listen to changes for live reloads -->
     <script>new EventSource('/esbuild').addEventListener('change', () => location.reload())</script>
   </body>
