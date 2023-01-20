@@ -121,7 +121,16 @@ export default function Contracts({ contractName }) {
         header += `function ${val.name}(${inputsToString(val.inputs)}) ${
           val.stateMutability
         }`
-        break
+        return (
+          <div className="flex flex-row items-center space-x-1">
+            <p className="text-[#9e7cd5c1]">function</p>
+
+            <div className='flex flex-row justify-center items-center space-x-1'>
+              <p className="text-[#a942e4] border-2 border-dotted rounded-lg pl-2 pr-2">{val.name}</p>
+              <p className="text-[#6C9AD2]">({val.inputs.length === 0 ? ' ' : inputsToString(val.inputs)})</p>
+            </div>
+          </div>
+        )
       case 'receive':
         header += `function ${val.name}(${inputsToString(val.inputs)}) ${
           val.stateMutability
@@ -160,7 +169,7 @@ export default function Contracts({ contractName }) {
     <Header>
       <div className="flex flex-col w-full justify-center items-center space-y-10 overflow-auto">
         <div className="flex w-screen max-w-[40em]">
-          <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+          <div className="bg-black text-white block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {!abiState ||
               (!balances && (
                 <div className="mt-2 mb-2 max-w-lg space-y-6">
@@ -242,11 +251,10 @@ export default function Contracts({ contractName }) {
                         })
                         .map((val, idx) => {
                           return (
-                            <div key={idx.toString()}>
+                            <div key={idx.toString()} className='space-y-2'>
                               <p className="text-md font-bold mt-2">
                                 {renderFunctionHeader(val)}
                               </p>
-
                               <TextInputs
                                 val={val}
                                 idxOne={idx}
