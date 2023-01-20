@@ -3,10 +3,7 @@ import Header from '../components/Header'
 import { SERVER_URL } from '../constants.js'
 
 export default function Home() {
-  const [solidityFiles, setSolidityFiles] = useState([
-    'MyContract.sol',
-    'Hello.sol',
-  ])
+  const [solidityFiles, setSolidityFiles] = useState([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
