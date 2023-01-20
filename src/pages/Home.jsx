@@ -22,10 +22,8 @@ export default function Home() {
     const result = await fetch(`${SERVER_URL}/solidityFiles`, {
       method: 'GET',
     })
-
     const jsonifiedResult = await result.json()
-
-    // setSolidityFiles(jsonifiedResult['files'])
+    setSolidityFiles(jsonifiedResult['files'])
   }
 
   const solidityFileChoices = solidityFiles.map((item) => {
