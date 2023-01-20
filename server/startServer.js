@@ -1,11 +1,10 @@
-import path from 'path'
 import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
-// import { usdc_abi } from './abis/usdc.js'
 import cors from 'cors'
 import chokidar from 'chokidar'
+import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -23,60 +22,51 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-let globalContract;
+let globalContract
+let globalAbis = {}
+let solidityFiles = []
 
-// Adding a server for ui tool
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
-let globalAbis = {}
-let solidityFiles = []; 
-
-const getFiles = (path) => {
-  if (fs.lstatSync(path).isDirectory()) { 
-    fs.readdirSync(path).forEach(f => {   
-      getFiles(path + '/' + f)
-    })
-  } else if (path.endsWith(".sol")) {
-    console.log('pushing')
-    solidityFiles.push(path)
-  }
-
-  return solidityFiles; 
-}
-
 app.get('/solidityFiles', async (req, res) => {
-  const files = fs.readdirSync(userRealDirectory)
+  try {
+    const files = fs.readdirSync(userRealDirectory)
+    var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
 
-  var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
-
-  return res.status(200).send({'files': solidityFiles})
-}); 
+    return res.status(200).send({ files: solidityFiles })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
 
 app.post('/deployContract', async (req, res) => {
-  try { 
-    const { abi, bytecode, constructor } = req.body; 
-  
-    let [factory, contract] = await deployContracts(abi, bytecode, constructor)
-    globalContract = contract
-  
-    return res.status(200).send('asdf')
-  } catch (e) {
-    console.log('contract deployment error: ', e);
+  try {
+    const { abi, bytecode, constructor } = req.body
 
-    return res.status(500).send({'error': e});
+    let [factory, contract] = await deployContracts(abi, bytecode, constructor)
+
+    globalContract = contract
+
+    return res.status(200).send({ message: 'Contract Deployed' })
+  } catch (e) {
+    console.log('Contract deployment error: ', e)
+    return res.status(500).send({ error: e })
   }
 })
 
 app.get('/abi', async (req, res) => {
-  const { contractName } = req.query; 
+  const { contractName } = req.query
 
-  let [abis, bytecode] = await compileContract(contractName)
-
-  globalAbis = abis;
-
-  return res.status(200).send({'abi': globalAbis, 'bytecode': bytecode})
+  try {
+    let [abis, bytecode] = await compileContract(contractName)
+    globalAbis = abis
+    return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
+  } catch (e) {
+    console.log(e)
+    return res.status(500).send({ error: e })
+  }
 })
 
 app.get('/balances', async (req, res) => {
@@ -87,9 +77,10 @@ app.get('/balances', async (req, res) => {
       eth: ether_balance,
     }
 
-    res.send(balances)
+    res.status(200).send(balances)
   } catch (e) {
     console.error(e.message)
+    res.status(500).send({ error: e })
   }
 })
 
@@ -108,7 +99,7 @@ app.post('/executeTransaction', async (req, res) => {
 
       // param[0] === value
       // param[1] === type
-      for (var paramIndex = 0; paramIndex < params.length; paramIndex++) {
+      for (let paramIndex = 0; paramIndex < params.length; paramIndex++) {
         // If it's a string, add quotation marks
         if (
           params[paramIndex][1] === 'string' ||
@@ -131,7 +122,7 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
-      console.log(callFunctionString);
+      console.log(callFunctionString)
 
       const functionResult = await eval(callFunctionString)
 
@@ -148,8 +139,8 @@ app.post('/executeTransaction', async (req, res) => {
 app.listen(PORT)
 
 async function compileContract(file) {
-  try { 
-    var input = {
+  try {
+    let input = {
       language: 'Solidity',
       sources: {
         [file]: {
@@ -164,20 +155,21 @@ async function compileContract(file) {
         },
       },
     }
-  
-    var output = JSON.parse(
-      solc.compile(JSON.stringify(input), { import: findImports })
-    );
-  
+
+    let output = JSON.parse(
+      solc.compile(JSON.stringify(input), { import: findImports }),
+    )
+
     let abis = {}
     let byteCodes = {}
-  
+
     // `output` here contains the JSON output as specified in the documentation
-    for (var contractName in output.contracts[file]) {
+    for (let contractName in output.contracts[file]) {
       abis[contractName] = output.contracts[file][contractName].abi
-      byteCodes[contractName] = output.contracts[file][contractName].evm.bytecode.object
+      byteCodes[contractName] =
+        output.contracts[file][contractName].evm.bytecode.object
     }
-  
+
     return [abis, byteCodes]
   } catch (e) {
     throw new Error(`Couldn't compile contract ${file} because of error: ${e}`)
@@ -191,12 +183,15 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   let deploymentString = 'factory.deploy('
 
-  for (var currentIndex = 0; currentIndex < constructor.length; currentIndex++) {
-    let param = constructor[currentIndex][0];
-    let type = constructor[currentIndex][1]; 
+  for (
+    var currentIndex = 0;
+    currentIndex < constructor.length;
+    currentIndex++
+  ) {
+    let param = constructor[currentIndex][0]
+    let type = constructor[currentIndex][1]
 
-    if (type === 'string')
-      deploymentString += "'" + param + "'"
+    if (type === 'string') deploymentString += "'" + param + "'"
     else deploymentString += param
 
     // Add commas if there are multiple params
@@ -207,7 +202,7 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   deploymentString += ')'
 
-  console.log('b4 eval: ', deploymentString);
+  console.log('b4 eval: ', deploymentString)
 
   const contract = await eval(deploymentString)
   console.log('Deployed Contract')
@@ -226,76 +221,41 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
-// async function checkUSDCBalance(provider, address) {
-//   const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+function findImports(filePath) {
+  try {
+    // Find the contract import in node_modules
+    let importInNodeModules = getFilepath([
+      getPathDirname(),
+      'node_modules',
+      filePath,
+    ])
+    let filesInCurrentDir = fs.readdirSync(
+      getFilepath([getPathDirname(), 'contracts']),
+    )
 
-//   try {
-//     const contract = new ethers.Contract(tokenAddress, usdc_abi, provider)
-//     const usdcBalance = await contract.balanceOf(address)
-//     const decimal = 10 ** 6
-//     const formatBalance = (usdcBalance / decimal).toString()
+    let file
 
-//     return formatBalance
-//   } catch (e) {
-//     throw new Error(e.message)
-//   }
-// }
+    // Import is another contract in the current directory
+    let fileIndex = filesInCurrentDir.findIndex((item) => item === filePath)
 
-// async function fundUSDC(provider, wallet) {
-//   const tokenAddress = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-//   const abi = usdc_abi
-//   try {
-//     let contract = new ethers.Contract(tokenAddress, abi, provider)
+    if (fileIndex !== -1) {
+      let contractFilePath = getFilepath([
+        getPathDirname(),
+        'contracts',
+        filesInCurrentDir[fileIndex],
+      ])
+      file = fs.readFileSync(contractFilePath)
+    }
+    // Import is a file in the node_modules folder
+    else {
+      file = fs.readFileSync(importInNodeModules)
+    }
 
-//     const masterMinter = await contract.masterMinter()
-//     const masterMinter_signer = await provider.getSigner(masterMinter)
-
-//     await provider.send('hardhat_setBalance', [
-//       masterMinter,
-//       ethers.utils.parseEther('1.0').toHexString().replace('0x0', '0x'),
-//     ])
-
-//     await provider.send('anvil_impersonateAccount', [masterMinter])
-
-//     let c_tx = await contract
-//       .connect(masterMinter_signer)
-//       .configureMinter(wallet.address, 1000000000, {
-//         from: masterMinter,
-//         gasLimit: 300000,
-//       })
-//     let receipt = await c_tx.wait()
-
-//     const amount = ethers.utils.parseUnits('100', 6)
-//     const mint = await contract.connect(wallet).mint(wallet.address, amount, {
-//       from: wallet.address,
-//     })
-//     let mint_receipt = await mint.wait()
-//     return mint_receipt
-//   } catch (e) {
-//     throw new Error(e.message)
-//   }
-// }
-
-function findImports(path) { 
-  // Find the contract import in node_modules
-  // let importInNodeModules = .split('/packages')[0] + '/node_modules/' + path;
-
-  let filesInCurrentDir = fs.readdirSync(userRealDirectory);
-
-  let file;
-
-  // Import is another contract in the current directory
-  let fileIndex = filesInCurrentDir.findIndex(item => item === path); 
-  if (fileIndex !== -1) { 
-    file = fs.readFileSync(filesInCurrentDir[fileIndex]);
-  }
-  // Import is a file in the node_modules folder
-  // else { 
-  //   file = fs.readFileSync(importInNodeModules); 
-  // }
-
-  return { 
-    contents: file.toString()
+    return {
+      contents: file.toString(),
+    }
+  } catch (e) {
+    throw new Error(e.message)
   }
 }
 
@@ -306,20 +266,19 @@ chokidar
   })
   .on('all', async (event, path) => {
     if (event === 'change') {
-      try { 
-        console.log('WATCHING SOL FILE: ', event, path)
+      try {
+        console.log('Watching .sol file: ', event, path)
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path)
         let [factory, contract] = await deployContracts(abis, bytecode)
-  
+
         console.log(`Changes found in ${path}, redeployed contract`)
-  
+
         globalContract = contract
         globalAbis = abis
-      }
-      catch (e) { 
-        console.log("ERROR: ", e.toString()); 
+      } catch (e) {
+        console.log('Error deploying changed contracts: ', e.message)
       }
     }
   })

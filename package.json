@@ -11,15 +11,16 @@
     "./esbuildConfig.js"
   ],
   "scripts": {
+    "preinstall": "node preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
-    "network": "node ./network/startNetwork.cjs",
+    "network": "node ./network/startNetwork.js",
     "siteEsBuild": "bun esbuildConfig.js ",
     "site": "npm-run-all --parallel siteEsBuild tailwind",
     "dev": "npm-run-all --parallel network tailwind"
   },
   "bin": {
-    "bagels": "./network/startNetwork.cjs"
+    "bagels": "./network/startNetwork.js"
   },
   "author": "",
   "license": "ISC",
