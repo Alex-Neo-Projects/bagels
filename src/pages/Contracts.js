@@ -9,16 +9,14 @@ export default function Contracts({ contractName }) {
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
 
-  const [funding, setFunding] = useState(false)
   const [contractNameState, setContractNameState] = useState()
   const [bytecodeState, setBytecodeState] = useState()
 
   const [listening, setListening] = useState(false)
-  // const [received, setReceived] = useState('')
 
   useEffect(() => {
     init()
-  }, [funding])
+  }, [])
 
   useEffect(() => {
     if (!listening) {
