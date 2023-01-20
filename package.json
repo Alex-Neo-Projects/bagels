@@ -13,6 +13,7 @@
     "./utils.js"
   ],
   "scripts": {
+    "preinstall": "bun preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.js",
