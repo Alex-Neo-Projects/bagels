@@ -26,7 +26,6 @@ app.use(cors())
 let client
 let globalContract
 let globalAbis = {}
-let solidityFiles = []
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
@@ -37,6 +36,7 @@ app.get('/solidityFiles', async (req, res) => {
     const files = fs.readdirSync(userRealDirectory)
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
 
+    console.log('done getting')
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
     return res.status(500).send({ error: e })
@@ -257,10 +257,18 @@ function findImports(filePath) {
       'node_modules',
       filePath,
     ])
+
+    
     let filesInCurrentDir = fs.readdirSync(
-      getFilepath([getPathDirname(), 'contracts']),
+      getFilepath([getPathDirname()]),
     )
 
+    // let filesInCurrentDir = fs.readdirSync(
+    //   getFilepath([getPathDirname(), 'contracts']),
+    // )
+
+    console.log('here: \n\n', filesInCurrentDir);
+    
     let file
 
     // Import is another contract in the current directory
