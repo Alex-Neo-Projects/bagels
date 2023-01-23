@@ -249,35 +249,63 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
+// Note: There HAS to be a better way to do this. But this is an initial first attempt, so I can figure out what a better solution could look like
+// Finding imports explantion:
+// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure): 
+  // test.sol
+  // node_modules/
+// outsideNodeModulesImportPath == the contract is nested compared to the node modules: 
+  // contracts/
+    // test.sol
+  // node_modules/
+// Man, file systems SUCK.
 function findImports(filePath) {
   try {
-    // Find the contract import in node_modules
-    let importInNodeModules = getFilepath([
-      getPathDirname(),
+
+    let nodeModulesFlatImportPath = getFilepath([
+      userRealDirectory,
       'node_modules',
       filePath,
     ])
 
-    
-    let filesInCurrentDir = fs.readdirSync(
-      getFilepath([getPathDirname()]),
-    )
-    
-    let file
+    let nodeModulesNestedImportPath = getFilepath([
+      path.join(userRealDirectory, '..'),
+      'node_modules',
+      filePath,
+    ])
 
+    let forgeFlatLibImportPath = getFilepath([
+      userRealDirectory,
+      'lib',
+      filePath,
+    ])
+
+    let forgeNestedLibImportPath = getFilepath([
+      path.join(userRealDirectory, '..'),
+      'lib',
+      filePath,
+    ])
+
+    let fileInCurrentDir = path.join(userRealDirectory, filePath);
+
+    let file;
+    
     // Import is another contract in the current directory
-    let fileIndex = filesInCurrentDir.findIndex((item) => item === filePath)
-
-    if (fileIndex !== -1) {
-      let contractFilePath = getFilepath([
-        getPathDirname(),
-        filesInCurrentDir[fileIndex],
-      ])
-      file = fs.readFileSync(contractFilePath)
+    if (fs.existsSync(fileInCurrentDir)) {
+      file = fs.readFileSync(fileInCurrentDir)
     }
-    // Import is a file in the node_modules folder
     else {
-      file = fs.readFileSync(importInNodeModules)
+      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath);
+      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath);
+
+      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath); 
+      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath); 
+
+      if (isNodeModulesImportFlat) file = fs.readFileSync(nodeModulesFlatImportPath);
+      else if (isNodeModulesImportNested) file = fs.readFileSync(nodeModulesNestedImportPath);
+      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath);
+      else if (isForgeImportNested) file = fs.readFileSync(forgeNestedLibImportPath);
+      else throw Error(`Couldn't find the import ${filePath}`)
     }
 
     return {
