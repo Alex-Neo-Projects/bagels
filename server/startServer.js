@@ -262,12 +262,6 @@ function findImports(filePath) {
     let filesInCurrentDir = fs.readdirSync(
       getFilepath([getPathDirname()]),
     )
-
-    // let filesInCurrentDir = fs.readdirSync(
-    //   getFilepath([getPathDirname(), 'contracts']),
-    // )
-
-    console.log('here: \n\n', filesInCurrentDir);
     
     let file
 
@@ -277,7 +271,6 @@ function findImports(filePath) {
     if (fileIndex !== -1) {
       let contractFilePath = getFilepath([
         getPathDirname(),
-        'contracts',
         filesInCurrentDir[fileIndex],
       ])
       file = fs.readFileSync(contractFilePath)
