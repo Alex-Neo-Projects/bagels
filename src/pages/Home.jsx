@@ -72,7 +72,7 @@ export default function Home() {
                   No solidity files found in this directory 😩
                 </p>
                 <h1 className="text-md text-bold pt-8 text-center">
-                  Are you running bagels from your contracts/ directory?
+                  Are you running bagels from your contracts directory?
                 </h1>
               </div>
             )}
