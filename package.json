@@ -17,9 +17,10 @@
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.js",
+    "devNetwork": "node ./network/startNetwork.js",
     "siteEsBuild": "node esbuildConfig.js",
     "site": "npm-run-all --parallel siteEsBuild tailwind",
-    "dev": "npm-run-all --parallel network tailwind"
+    "dev": "npm-run-all --parallel devNetwork tailwind"
   },
   "bin": {
     "bagels": "./network/startNetwork.js"

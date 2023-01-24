@@ -41,7 +41,7 @@ export default function Home() {
           <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             <div className="flex flex-col max-w-prose">
               <p className="text-xl tracking-tighter text-left font-bold">
-                Select a contract to deploy:
+                Select a contract:
               </p>
             </div>
 

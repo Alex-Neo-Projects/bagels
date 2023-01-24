@@ -4,7 +4,7 @@ import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
-import path from 'path'
+import path, { basename, join } from 'path'
 import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -24,24 +24,51 @@ app.use(express.json())
 app.use(cors())
 
 let client
-let globalContract
+let globalContract;
+let solidityFileDirMappings = {};
 let globalAbis = {}
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
+function getSolidityFiles() { 
+  let filesReturned = getAllFiles(userRealDirectory); 
+
+  filesReturned.map((file) => {
+    const basename = path.basename(file);
+    solidityFileDirMappings[[basename]] = file;
+  });  
+}
+
 app.get('/solidityFiles', async (req, res) => {
   try {
-    const files = fs.readdirSync(userRealDirectory)
-    var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+    getSolidityFiles(); 
 
-    console.log('done getting')
-    return res.status(200).send({ files: solidityFiles })
+    return res.status(200).send({ files: Object.keys(solidityFileDirMappings)})
   } catch (e) {
+    console.log('error: ', e);
     return res.status(500).send({ error: e })
   }
 })
+
+function getAllFiles(dirPath, arrayOfFiles) {
+  let files = fs.readdirSync(dirPath)
+
+  arrayOfFiles = arrayOfFiles || []
+
+  files.forEach(function(file) {
+    if (file.includes('node_modules')) return;
+    else if (file.includes('lib')) return;
+    else if (fs.statSync(dirPath + "/" + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles)
+    } else {
+      if (file.split('.').pop() === 'sol') arrayOfFiles.push(path.join(dirPath, "/", file))
+    }
+  })
+
+  return arrayOfFiles
+}
 
 app.post('/deployContract', async (req, res) => {
   try {
@@ -165,6 +192,13 @@ app.listen(PORT)
 
 async function compileContract(file) {
   try {
+    if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
+
+    console.log('new way: ', solidityFileDirMappings[file])
+    const readfileversion = path.resolve(userRealDirectory, file)
+
+    console.log(readfileversion);
+
     let input = {
       language: 'Solidity',
       sources: {
@@ -204,7 +238,6 @@ async function compileContract(file) {
   }
 }
 
-// NOTE: currently this only deploys 1 contract at a time
 async function deployContracts(abis, bytecodes, constructor) {
   let abi = Object.values(abis)[0]
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)

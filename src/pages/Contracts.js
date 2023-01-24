@@ -90,8 +90,6 @@ export default function Contracts({ contractName }) {
   }
 
   async function getABI() {
-    console.log(`${SERVER_URL}/abi?contractName=${contractName} `)
-
     const abiAndBytecode = await fetch(
       `${SERVER_URL}/abi?contractName=${contractName}`,
       {
