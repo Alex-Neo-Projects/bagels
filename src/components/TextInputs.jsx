@@ -4,7 +4,13 @@ import { SERVER_URL } from '../constants'
 
 const PORT = 9090
 
-export function TextInputs({ val, idxOne, getBalance, deployContract, getHistoricalTransactions }) {
+export function TextInputs({
+  val,
+  idxOne,
+  getBalance,
+  deployContract,
+  getHistoricalTransactions,
+}) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
@@ -132,7 +138,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, getHistori
 
   return (
     <div
-      className="flex flex-col justify-between items-start space-y-1 h-full p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl"
+      className="flex flex-col justify-between items-start space-y-1 h-full p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl"
       key={idxOne.toString()}
     >
       <div className="flex flex-row justify-end w-full items-center space-x-4">
@@ -140,7 +146,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, getHistori
           return (
             <input
               key={idx.toString()}
-              className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#3C424210] outline-none text-md"
+              className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#93939328] outline-none text-sm"
               type={'text'}
               placeholder={`${param.name} (${param.type})`}
               onChange={handleInputListChange.bind(this, [idx, param.type])}
@@ -150,9 +156,9 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, getHistori
 
         {val.stateMutability === 'payable' && (
           <input
-            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#3C424210] outline-none text-md"
+            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#93939328] outline-none text-sm"
             type={'text'}
-            placeholder={'Enter an amount (ETH)'}
+            placeholder={'Enter an amount'}
             onInput={(e) => setAmount(parseFloat(e.target.value))}
           />
         )}
@@ -160,8 +166,8 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, getHistori
         <button
           className={
             val.inputs.length > 0
-              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
-              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
+              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]'
+              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]'
           }
           onClick={async () => {
             // Clear outputs and errors
@@ -218,37 +224,45 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, getHistori
           }}
           disabled={executingTransaction}
         >
-          {val.stateMutability === 'view' || val.stateMutability === 'pure'
-            ? 'Read'
-            : 'Write'}
+          <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
+            {executingTransaction ? (
+              <div className="flex flex-row justify-center items-center">
+                <p>Loading...</p>
+              </div>
+            ) : val.stateMutability === 'view' ||
+              val.stateMutability === 'pure' ? (
+              <p>Read</p>
+            ) : (
+              <p>Write</p>
+            )}
+          </div>
         </button>
       </div>
 
-      <div className="flex flex-row justify-start w-full items-center">
-        {executingTransaction ? (
-          <div className="flex flex-row justify-center items-center mt-2">
-            <h2 className="text-sm font-bold">Loading</h2>
-          </div>
-        ) : null}
-      </div>
-
       {output && (
-        <div>
-          <p className="text-lg">{output}</p>
+        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
+          <p className="text-md font-bold">Output</p>
+          <div className="flex w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
+            <p className="text-sm">{output}</p>
+          </div>
         </div>
       )}
 
       {error && (
-        <div>
-          <p className="text-red-600">Input Error:</p>
-          <p className="text-red-600">{error}</p>
+        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
+          <p className="text-md font-bold">Error</p>
+          <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
+            <p className="text-sm">{error}</p>
+          </div>
         </div>
       )}
 
       {executionError && (
-        <div className="overflow-hidden break-all">
-          <p className="text-red-600">Error:</p>
-          <p className="text-red-600">{executionError}</p>
+        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full overflow-hidden break-all">
+          <p className="text-md font-bold">Error</p>
+          <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
+            <p className="text-sm">{executionError}</p>
+          </div>
         </div>
       )}
     </div>

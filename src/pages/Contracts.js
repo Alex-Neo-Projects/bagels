@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
+import { Link } from 'wouter'
 
 export default function Contracts({ contractName }) {
   const [balances, setBalances] = useState()
@@ -201,18 +202,25 @@ export default function Contracts({ contractName }) {
   return (
     <Header>
       <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
-        <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-          <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
-            {!abiState ||
-              (!balances && (
-                <div className="mt-2 mb-2 max-w-lg space-y-6">
-                  <p className="text-xl tracking-tighter text-left font-bold">
-                    Loading {contractName}
-                  </p>
-                </div>
-              ))}
+        <div className="px-2">
+          <Link href="/">
+            <button className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]">
+              <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
+                <p>Contracts</p>
+              </div>
+            </button>
+          </Link>
+        </div>
 
-            {constructorIndex > -1 && !constructorDeployed ? (
+        <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
+          <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            {!abiState || !balances ? (
+              <div className="max-w-lg">
+                <p className="text-md tracking-tighter text-left font-bold">
+                  Loading {contractName}
+                </p>
+              </div>
+            ) : constructorIndex > -1 && !constructorDeployed ? (
               <div className="flex flex-col justify-start space-y-4">
                 <p className="text-xl font-medium">Enter constructors:</p>
                 <TextInputs
@@ -223,31 +231,16 @@ export default function Contracts({ contractName }) {
                 />
               </div>
             ) : (
-              <div className="flex flex-col justify-start space-y-4">
+              <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
-                  <div>
-                    <a href="/">
-                      <img
-                        className="justify-center items-center"
-                        src="https://cdn-icons-png.flaticon.com/512/93/93634.png"
-                        height={25}
-                        width={25}
-                      />
-                    </a>
-                  </div>
-
-                  <div className="pl-4">
-                    <h1 className="text-xl tracking-tighter text-left font-bold">
-                      Contract {contractNameState || ''}
-                    </h1>
-                  </div>
+                  <h1 className="text-xl tracking-tighter text-left font-bold">
+                    Contract {contractNameState || ''}
+                  </h1>
                 </div>
 
-                <div className="flex flex-col space-y-4">
+                <div className="flex flex-col space-y-2">
                   <div className="space-y-1">
-                    <p className="text-xl font-medium">
-                      Connected to wallet with address:
-                    </p>
+                    <p className="text-xl font-medium">Wallet address</p>
                     <p className="text-sm">
                       0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
                     </p>
@@ -255,45 +248,37 @@ export default function Contracts({ contractName }) {
                 </div>
 
                 <div className="flex flex-col space-y-1">
-                  <p className="text-xl font-medium">Address Balance:</p>
-                  <p className="text-md">eth: {balances?.balances?.eth}</p>
+                  <p className="text-xl font-medium">Address Balance</p>
+                  <p className="text-md">ETH: {balances?.balances?.eth}</p>
                 </div>
 
                 <div className="flex flex-col">
-                  <p className="text-xl font-medium">ABI:</p>
+                  <p className="text-xl font-medium">ABI</p>
 
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-3">
                     {abiState &&
                       contractNameState &&
-                      abiState[contractNameState]
-                        .sort((a, b) => {
-                          if (a.stateMutability === 'view') {
-                            return -1
-                          }
-                          if (b.stateMutability === 'view') {
-                            return 1
-                          }
-                          return 0
-                        })
-                        .map((val, idx) => {
-                          return (
-                            <div key={idx.toString()}>
+                      abiState[contractNameState].map((val, idx) => {
+                        return (
+                          <div key={idx.toString()} className="space-y-2">
+                            <div>
                               <p className="text-md font-bold mt-2">
                                 {renderFunctionHeader(val)}
                               </p>
-
-                              <TextInputs
-                                val={val}
-                                idxOne={idx}
-                                getBalance={getBalance}
-                                deployContract={TextInputDeployContract}
-                                getHistoricalTransactions={
-                                  getHistoricalTransactions
-                                }
-                              />
                             </div>
-                          )
-                        })}
+
+                            <TextInputs
+                              val={val}
+                              idxOne={idx}
+                              getBalance={getBalance}
+                              deployContract={TextInputDeployContract}
+                              getHistoricalTransactions={
+                                getHistoricalTransactions
+                              }
+                            />
+                          </div>
+                        )
+                      })}
                   </div>
                 </div>
               </div>
@@ -303,10 +288,10 @@ export default function Contracts({ contractName }) {
 
         <div className="flex flex-col space-y-4">
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-            <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
                 {/* Transaction TEMPLATE */}
-                <div className="flex flex-col justify-start items-start space-y-2">
+                <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
                     <h1 className="text-xl tracking-tighter text-left font-bold">
                       Transactions
@@ -320,60 +305,87 @@ export default function Contracts({ contractName }) {
                     <div className="flex flex-col space-y-2">
                       {transactions.length > 0 ? (
                         transactions.map((val, idx) => {
-                          console.log(val.params)
                           return (
                             <div
                               key={idx.toString()}
-                              className="space-y-3 p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl break-all overflow-hidden"
+                              className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
                             >
                               <div>
                                 <p className="text-lg font-extrabold">
-                                  Nonce #{''}
-                                  {val.res.nonce}
+                                  Nonce #{val.res.nonce}
                                 </p>
                               </div>
 
-                              <div className="flex flex-col">
-                                <p className="text-md font-bold">Hash:</p>
-                                <p>{val.res.hash}</p>
+                              <div className="flex flex-col space-y-1">
+                                <p className="text-md font-bold">Hash</p>
+                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                  <p className="text-sm">{val.res.hash}</p>
+                                </div>
                               </div>
 
-                              <div className="flex flex-col">
-                                <p className="text-md font-bold">From:</p>
-                                <p>{val.res.from}</p>
+                              <div className="flex flex-col space-y-1">
+                                <p className="text-md font-bold">From</p>
+                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                  <p className="text-sm">{val.res.from}</p>
+                                </div>
                               </div>
 
-                              <div className="flex flex-col space-y-2">
-                                <div className="flex flex-col">
-                                  <p className="text-md font-bold">Data:</p>
-                                  <p>{val.res.data}</p>
+                              <div className="flex flex-col space-y-4">
+                                <div className="flex flex-col space-y-1">
+                                  <p className="text-md font-bold">Data</p>
+                                  <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                    <p className="test-sm">{val.res.data}</p>
+                                  </div>
                                 </div>
 
-                                <div className="flex flex-col space-y-2 pl-2">
-                                  <div className="flex flex-col">
+                                <div className="flex flex-col space-y-4">
+                                  <div className="flex flex-col space-y-1">
                                     <p className="text-md font-bold">
-                                      Function:
+                                      Function
                                     </p>
-                                    <p>
-                                      {val.functionName}(
-                                      {val.params.length > 0 ? '...' : ' '}){' '}
-                                      {val.stateMutability}
-                                    </p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className='text-sm'>
+                                        {val.functionName}(
+                                        {val.params.length > 0 ? '' : ' '}){' '}
+                                        {val.stateMutability}
+                                      </p>
+                                    </div>
                                   </div>
 
-                                  <div className="flex flex-col">
-                                    <p className="text-md font-bold">Params:</p>
+                                  <div className="flex flex-col space-y-2">
+                                    <p className="text-md font-bold">Params</p>
 
-                                    <div className='space-y-4'>
+                                    <div className="space-y-6">
                                       {val.params.map((param, paramsVal) => {
                                         return (
-                                          <div className="pl-2">
-                                            <p className="text-sm font-bold">
-                                              value: {param[0]}
-                                            </p>
-                                            <p className="text-sm font-bold">
-                                              type: {param[1]}
-                                            </p>
+                                          <div className="pl-2 space-y-2">
+                                            <div className="flex flex-row space-x-4 justify-center items-center">
+                                              <div className="w-10">
+                                                <p className="text-sm font-bold">
+                                                  Value
+                                                </p>
+                                              </div>
+
+                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                <p className="text-sm font-bold">
+                                                  {param[0]}
+                                                </p>
+                                              </div>
+                                            </div>
+
+                                            <div className="flex flex-row space-x-4 justify-center items-center">
+                                              <div className="w-10 ">
+                                                <p className="text-sm font-bold">
+                                                  Type
+                                                </p>
+                                              </div>
+
+                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                <p className="text-sm font-bold">
+                                                  {param[1]}
+                                                </p>
+                                              </div>
+                                            </div>
                                           </div>
                                         )
                                       })}
