@@ -202,7 +202,7 @@ export default function Contracts({ contractName }) {
     <Header>
       <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
         <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-          <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+          <div className=" text-white block border border-[#333333] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {!abiState ||
               (!balances && (
                 <div className="mt-2 mb-2 max-w-lg space-y-6">
