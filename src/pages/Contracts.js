@@ -309,63 +309,6 @@ export default function Contracts({ contractName }) {
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
             <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
-                {/* CONTRACT TEMPLATE */}
-                <div className="flex flex-col justify-start items-start space-y-2">
-                  <div className="flex flex-col">
-                    <h1 className="text-xl tracking-tighter text-left font-bold">
-                      Contract Deployments
-                    </h1>
-                    <p className="text-sm font-medium">
-                      Your contract deployments throughout the development of
-                      your contract.
-                    </p>
-                  </div>
-                  <div className="flex flex-col">
-                    <div className="flex flex-col space-y-2">
-                      {contracts.length > 0 ? (
-                        <div className="space-y-3 p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl break-all overflow-hidden">
-                          <div>
-                            <p className="text-lg font-extrabold">
-                              Version {contracts.length.toString()}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-col ">
-                            <p className="text-md font-bold">
-                              Deployer Address:
-                            </p>
-                            <p>{contracts[0].deployTransaction.from}</p>
-                          </div>
-
-                          <div className="flex flex-col">
-                            <p className="text-md font-bold">
-                              Contract Address:
-                            </p>
-                            <p>{contracts[0].address}</p>
-                          </div>
-
-                          <div className="flex flex-col">
-                            <p className="text-md font-bold">
-                              Transaction Hash:
-                            </p>
-                            <p>{contracts[0].deployTransaction.hash}</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="pt-4">
-                          <p>No Contract Deployments Found</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-            <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
-              <div className="flex flex-col justify-start space-y-4">
                 {/* Transaction TEMPLATE */}
                 <div className="flex flex-col justify-start items-start space-y-2">
                   <div className="flex flex-col">
@@ -395,23 +338,17 @@ export default function Contracts({ contractName }) {
                               </div>
 
                               <div className="flex flex-col">
-                                <p className="text-md font-bold">
-                                  Hash:
-                                </p>
+                                <p className="text-md font-bold">Hash:</p>
                                 <p>{val.hash}</p>
                               </div>
 
                               <div className="flex flex-col">
-                                <p className="text-md font-bold">
-                                  From:
-                                </p>
+                                <p className="text-md font-bold">From:</p>
                                 <p>{val.from}</p>
                               </div>
 
                               <div className="flex flex-col">
-                                <p className="text-md font-bold">
-                                  Data:
-                                </p>
+                                <p className="text-md font-bold">Data:</p>
                                 <p>{val.data}</p>
                               </div>
                             </div>
