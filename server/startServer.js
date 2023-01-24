@@ -194,19 +194,11 @@ async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
 
-    console.log('new way: ', solidityFileDirMappings[file])
-    const readfileversion = path.resolve(userRealDirectory, file)
-
-    console.log(readfileversion);
-
     let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(
-            path.resolve(userRealDirectory, file),
-            'utf8',
-          ),
+           content: fs.readFileSync(solidityFileDirMappings[file]).toString()
         },
       },
       settings: {
@@ -294,7 +286,8 @@ async function checkEtherBalance(provider, address) {
 // Man, file systems SUCK.
 function findImports(filePath) {
   try {
-
+    console.log(filePath);
+    
     let nodeModulesFlatImportPath = getFilepath([
       userRealDirectory,
       'node_modules',
