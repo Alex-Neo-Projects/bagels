@@ -5,7 +5,7 @@ import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
-import { getFilepath, getPathDirname } from '../utils.js'
+import { getFilepath } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -23,12 +23,22 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-let client
-let globalContract
-let globalAbis = {}
+// client is used to send events to the frontend
+let client = null
 
-let historicalContracts = []
-let historicalTransactions = []
+// globalContract is the currently selected contract
+let globalContract = null
+
+// stores all the contracts and its state (eg. deployment addresses, transactions, abi)
+/*
+  {
+    "1.sol": {
+      "deploymentAddresses": [],
+      "transactions": [],
+    }
+  }
+*/
+let contracts = {}
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
@@ -37,7 +47,25 @@ app.get('/', (req, res) => {
 app.get('/solidityFiles', async (req, res) => {
   try {
     const files = fs.readdirSync(userRealDirectory)
-    var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+    let solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+
+    // check for duplicate file names
+    let dups = new Set(solidityFiles).size !== solidityFiles.length
+    if (dups) {
+      throw new Error(
+        'There are duplicate files with the same contract name found.',
+      )
+    }
+
+    solidityFiles.map((solidityFile, _) => {
+      // only add the file to "contracts" if it doesn't exist already
+      if (!(solidityFile in contracts)) {
+        contracts[solidityFile] = {
+          deploymentAddresses: [],
+          transactions: [],
+        }
+      }
+    })
 
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
@@ -45,16 +73,32 @@ app.get('/solidityFiles', async (req, res) => {
   }
 })
 
+// deploy contracts only if this is a first load, or the user manually deploys it, or the contract changes in the directory
+// make updates to globalContract and contracts
 app.post('/deployContract', async (req, res) => {
   try {
-    const { abi, bytecode, constructor } = req.body
+    const { abi, bytecode, constructor, contractName, isManual } = req.body
 
-    let [factory, contract] = await deployContracts(abi, bytecode, constructor)
+    let isFirstLoad =
+      contracts[contractName]['deploymentAddresses'].length === 0
 
-    globalContract = contract
-    historicalContracts.unshift(contract)
+    if (isManual || isFirstLoad) {
+      let { _, contract } = await deployContracts(abi, bytecode, constructor)
 
-    return res.status(200).send({ message: 'Contract Deployed' })
+      // push contract update
+      contracts[contractName]['deploymentAddresses'].push(contract.address)
+      // update the currently selected contract
+      globalContract = contract
+
+      return res.status(200).send({
+        message: 'Contract Deployed',
+        contract: contracts[contractName],
+      })
+    } else {
+      return res
+        .status(200)
+        .send({ message: 'Contract Found', contract: contracts[contractName] })
+    }
   } catch (e) {
     console.log('Contract deployment error: ', e)
     return res.status(500).send({ error: e })
@@ -66,8 +110,7 @@ app.get('/abi', async (req, res) => {
 
   try {
     let [abis, bytecode] = await compileContract(contractName)
-    globalAbis = abis
-    return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
+    return res.status(200).send({ abi: abis, bytecode: bytecode })
   } catch (e) {
     return res.status(500).send({ error: e })
   }
@@ -89,9 +132,20 @@ app.get('/balances', async (req, res) => {
 })
 
 app.post('/executeTransaction', async (req, res) => {
-  const { functionName, params, stateMutability, amount } = req.body
-
   try {
+    const {
+      functionName,
+      params,
+      stateMutability,
+      amount,
+      contractName,
+    } = req.body
+    if (!(contractName in contracts)) {
+      throw new Error(
+        'Contract does not exist, you cannot execute this transaction',
+      )
+    }
+
     if (
       stateMutability === 'view' ||
       stateMutability === 'nonpayable' ||
@@ -130,12 +184,8 @@ app.post('/executeTransaction', async (req, res) => {
       const functionResult = await eval(callFunctionString)
 
       if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
-        historicalTransactions.unshift({
-          res: functionResult,
-          functionName: functionName,
-          params: params,
-          stateMutability: stateMutability,
-        })
+        functionResult['params'] = params
+        contracts[contractName]['transactions'].push(functionResult)
       }
 
       return res.send({
@@ -144,6 +194,25 @@ app.post('/executeTransaction', async (req, res) => {
     }
   } catch (e) {
     console.log(e)
+    return res.status(500).send({ error: e })
+  }
+})
+
+app.post('/transactions', async (req, res) => {
+  try {
+    const { contractName } = req.body
+
+    console.log(contractName)
+    console.log(!(contractName in contracts))
+
+    if (!(contractName in contracts)) {
+      throw new Error('Contract does not exist, try again')
+    }
+
+    console.log(contracts[contractName])
+
+    return res.status(200).send({ transactions: contracts[contractName]['transactions'] })
+  } catch (e) {
     return res.status(500).send({ error: e })
   }
 })
@@ -163,29 +232,6 @@ app.get('/subscribeToChanges', async (req, res) => {
     console.log(`Connection closed`)
     client = null
   })
-})
-
-app.post('/test', (req, res) => {
-  refreshFrontend()
-  res.send(200)
-})
-
-app.get('/getHistoricalTransactions', async (req, res) => {
-  try {
-    return res
-      .status(200)
-      .send({ historicalTransactions: historicalTransactions })
-  } catch (e) {
-    return res.status(500).send({ error: e })
-  }
-})
-
-app.get('/getHistoricalContracts', async (req, res) => {
-  try {
-    return res.status(200).send({ historicalContracts: historicalContracts })
-  } catch (e) {
-    return res.status(500).send({ error: e })
-  }
 })
 
 app.listen(PORT)
@@ -235,34 +281,44 @@ async function compileContract(file) {
 
 // NOTE: currently this only deploys 1 contract at a time
 async function deployContracts(abis, bytecodes, constructor) {
-  let abi = Object.values(abis)[0]
-  const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
+  try {
+    let abi = Object.values(abis)[0]
 
-  let deploymentString = 'factory.deploy('
+    const factory = new ContractFactory(
+      abi,
+      Object.values(bytecodes)[0],
+      wallet,
+    )
 
-  for (
-    var currentIndex = 0;
-    currentIndex < constructor.length;
-    currentIndex++
-  ) {
-    let param = constructor[currentIndex][0]
-    let type = constructor[currentIndex][1]
+    let deploymentString = 'factory.deploy('
 
-    if (type === 'string') deploymentString += "'" + param + "'"
-    else deploymentString += param
+    if (constructor) {
+      for (
+        let currentIndex = 0;
+        currentIndex < constructor.length;
+        currentIndex++
+      ) {
+        let param = constructor[currentIndex][0]
+        let type = constructor[currentIndex][1]
 
-    // Add commas if there are multiple params
-    if (currentIndex < constructor.length) {
-      deploymentString += ','
+        if (type === 'string') deploymentString += "'" + param + "'"
+        else deploymentString += param
+
+        // Add commas if there are multiple params
+        if (currentIndex < constructor.length) {
+          deploymentString += ','
+        }
+      }
     }
+
+    deploymentString += ')'
+
+    const contract = await eval(deploymentString)
+
+    return { factory, contract }
+  } catch (e) {
+    throw new Error(e.message)
   }
-
-  deploymentString += ')'
-
-  const contract = await eval(deploymentString)
-  console.log('Deployed Contract')
-
-  return [factory, contract]
 }
 
 async function checkEtherBalance(provider, address) {
@@ -278,17 +334,16 @@ async function checkEtherBalance(provider, address) {
 
 // Note: There HAS to be a better way to do this. But this is an initial first attempt, so I can figure out what a better solution could look like
 // Finding imports explantion:
-// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure): 
-  // test.sol
-  // node_modules/
-// outsideNodeModulesImportPath == the contract is nested compared to the node modules: 
-  // contracts/
-    // test.sol
-  // node_modules/
+// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure):
+// test.sol
+// node_modules/
+// outsideNodeModulesImportPath == the contract is nested compared to the node modules:
+// contracts/
+// test.sol
+// node_modules/
 // Man, file systems SUCK.
 function findImports(filePath) {
   try {
-
     let nodeModulesFlatImportPath = getFilepath([
       userRealDirectory,
       'node_modules',
@@ -313,25 +368,27 @@ function findImports(filePath) {
       filePath,
     ])
 
-    let fileInCurrentDir = path.join(userRealDirectory, filePath);
+    let fileInCurrentDir = path.join(userRealDirectory, filePath)
 
-    let file;
-    
+    let file
+
     // Import is another contract in the current directory
     if (fs.existsSync(fileInCurrentDir)) {
       file = fs.readFileSync(fileInCurrentDir)
-    }
-    else {
-      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath);
-      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath);
+    } else {
+      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath)
+      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath)
 
-      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath); 
-      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath); 
+      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath)
+      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath)
 
-      if (isNodeModulesImportFlat) file = fs.readFileSync(nodeModulesFlatImportPath);
-      else if (isNodeModulesImportNested) file = fs.readFileSync(nodeModulesNestedImportPath);
-      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath);
-      else if (isForgeImportNested) file = fs.readFileSync(forgeNestedLibImportPath);
+      if (isNodeModulesImportFlat)
+        file = fs.readFileSync(nodeModulesFlatImportPath)
+      else if (isNodeModulesImportNested)
+        file = fs.readFileSync(nodeModulesNestedImportPath)
+      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath)
+      else if (isForgeImportNested)
+        file = fs.readFileSync(forgeNestedLibImportPath)
       else throw Error(`Couldn't find the import ${filePath}`)
     }
 
@@ -357,15 +414,15 @@ chokidar
     if (event === 'change') {
       try {
         console.log('Watching .sol file: ', event, path)
+        console.log(`Changes found in ${path}, redeploying contract`)
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path)
-        let [factory, contract] = await deployContracts(abis, bytecode, [])
+        let { _, contract } = await deployContracts(abis, bytecode, [])
 
-        console.log(`Changes found in ${path}, redeployed contract`)
-
+        // Update deployment address field
+        contracts[path]['deploymentAddresses'].push(contract.address)
         globalContract = contract
-        globalAbis = abis
 
         refreshFrontend()
       } catch (e) {

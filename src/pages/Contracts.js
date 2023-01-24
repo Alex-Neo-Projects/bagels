@@ -10,13 +10,14 @@ export default function Contracts({ contractName }) {
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
 
-  const [transactions, setTransactions] = useState([])
-  const [contracts, setContracts] = useState([])
+  const [contract, setContract] = useState({})
 
   const [contractNameState, setContractNameState] = useState()
   const [bytecodeState, setBytecodeState] = useState()
 
   const [listening, setListening] = useState(false)
+
+  const [error, setError] = useState()
 
   useEffect(() => {
     if (!listening) {
@@ -35,58 +36,55 @@ export default function Contracts({ contractName }) {
   }, [listening])
 
   async function init() {
-    Promise.all([
-      getBalance(),
-      getHistoricalTransactions(),
-      getHistoricalContracts(),
-    ])
+    try {
+      const { returnedAbi, bytecode } = await getABI()
 
-    const { returnedAbi, bytecode } = await getABI()
+      let constructorIndex = getConstructorAbiIndex(returnedAbi)
+      if (constructorIndex !== -1) {
+        setConstructorIndex(constructorIndex)
+        return
+      }
 
-    let constructorIndex = getConstructorAbiIndex(returnedAbi)
-
-    if (constructorIndex !== -1) {
-      setConstructorIndex(constructorIndex)
-      return
+      // constructor arugument is null at this point
+      // manual deploy is false at this point
+      await deployContract(returnedAbi, bytecode, null, contractName, false)
+      await getBalance()
+    } catch (e) {
+      setError(e)
     }
-
-    await deployContract(returnedAbi, bytecode, [])
   }
 
   async function getBalance() {
-    const balance = await fetch(`${SERVER_URL}/balances`, {
-      method: 'GET',
-    })
-
-    const jsonifiedBalance = await balance.json()
-
-    setBalances({ balances: jsonifiedBalance })
-  }
-
-  async function getHistoricalTransactions() {
     try {
-      const transactions = await fetch(
-        `${SERVER_URL}/getHistoricalTransactions`,
-        {
-          method: 'GET',
-        },
-      )
-      const jsonifiedTransactions = await transactions.json()
-      setTransactions(jsonifiedTransactions.historicalTransactions)
+      const balance = await fetch(`${SERVER_URL}/balances`, {
+        method: 'GET',
+      })
+      const jsonifiedBalance = await balance.json()
+      setBalances({ balances: jsonifiedBalance })
     } catch (e) {
-      console.error(e.message)
+      throw new Error(e.message)
     }
   }
 
-  async function getHistoricalContracts() {
+  async function getTransactions(contractName) {
     try {
-      const contracts = await fetch(`${SERVER_URL}/getHistoricalContracts`, {
-        method: 'GET',
+      const transactions = await fetch(`${SERVER_URL}/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractName: contractName,
+        }),
       })
-      const jsonifiedContracts = await contracts.json()
-      setContracts(jsonifiedContracts.historicalContracts)
+      const jsonifiedTransactions = await transactions.json()
+
+      setContract((prev) => ({
+        ...prev,
+        transactions: jsonifiedTransactions['transactions'],
+      }))
     } catch (e) {
-      console.error(e.message)
+      throw new Error(e.message)
     }
   }
 
@@ -100,15 +98,33 @@ export default function Contracts({ contractName }) {
         return index
       }
     }
+
     return -1
   }
 
   async function TextInputDeployContract(constructor) {
-    await deployContract(abiState, bytecodeState, constructor)
-    setConstructorDeployed(true)
+    try {
+      await deployContract(
+        abiState,
+        bytecodeState,
+        constructor,
+        contractName,
+        false,
+      )
+      setConstructorDeployed(true)
+    } catch (e) {
+      console.error(e.message)
+      setError(e)
+    }
   }
 
-  async function deployContract(abi, bytecode, constructor) {
+  async function deployContract(
+    abi,
+    bytecode,
+    constructor,
+    contractName,
+    isManual,
+  ) {
     const deployment = await fetch(`${SERVER_URL}/deployContract`, {
       method: 'POST',
       headers: {
@@ -118,20 +134,22 @@ export default function Contracts({ contractName }) {
         abi: abi,
         bytecode: bytecode,
         constructor: constructor,
+        contractName: contractName,
+        isManual: isManual,
       }),
     })
 
     const deploymentParsed = await deployment.json()
 
-    if (deployment.status !== 200) {
-      console.log(deploymentParsed.error)
+    if (deployment.status === 200) {
+      setContract(deploymentParsed['contract'])
+    } else if (deployment.status !== 200) {
+      console.log(deploymentParsed.error.message)
     }
   }
 
   async function getABI() {
     try {
-      console.log(`${SERVER_URL}/abi?contractName=${contractName} `)
-
       const abiAndBytecode = await fetch(
         `${SERVER_URL}/abi?contractName=${contractName}`,
         {
@@ -140,7 +158,6 @@ export default function Contracts({ contractName }) {
       )
 
       const jsonifiedAbiAndBytecode = await abiAndBytecode.json()
-
       const contractNameFromAbi = Object.keys(jsonifiedAbiAndBytecode['abi'])[0]
 
       setContractNameState(contractNameFromAbi)
@@ -154,6 +171,7 @@ export default function Contracts({ contractName }) {
       }
     } catch (e) {
       console.error(e.message)
+      throw new Error(e.message)
     }
   }
 
@@ -228,14 +246,25 @@ export default function Contracts({ contractName }) {
                   idxOne={0}
                   getBalance={getBalance}
                   deployContract={TextInputDeployContract}
+                  getTransactions={getTransactions}
+                  contractName={contractName}
                 />
               </div>
             ) : (
               <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
-                  <h1 className="text-xl tracking-tighter text-left font-bold">
-                    Contract {contractNameState || ''}
-                  </h1>
+                  <div className="flex flex-col">
+                    <h1 className="text-xl tracking-tighter text-left font-bold">
+                      Contract {contractNameState || ''}
+                    </h1>
+                    <p className="text-sm left">
+                      {
+                        contract['deploymentAddresses'][
+                          contract['deploymentAddresses'].length - 1
+                        ]
+                      }
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex flex-col space-y-2">
@@ -272,9 +301,8 @@ export default function Contracts({ contractName }) {
                               idxOne={idx}
                               getBalance={getBalance}
                               deployContract={TextInputDeployContract}
-                              getHistoricalTransactions={
-                                getHistoricalTransactions
-                              }
+                              getTransactions={getTransactions}
+                              contractName={contractName}
                             />
                           </div>
                         )
@@ -290,7 +318,6 @@ export default function Contracts({ contractName }) {
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
             <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
-                {/* Transaction TEMPLATE */}
                 <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
                     <h1 className="text-xl tracking-tighter text-left font-bold">
@@ -303,8 +330,9 @@ export default function Contracts({ contractName }) {
                   </div>
                   <div className="flex flex-col">
                     <div className="flex flex-col space-y-2">
-                      {transactions.length > 0 ? (
-                        transactions.map((val, idx) => {
+                      {contract['transactions'] &&
+                      contract['transactions'].length > 0 ? (
+                        contract['transactions'].slice(0).reverse().map((val, idx) => {
                           return (
                             <div
                               key={idx.toString()}
@@ -312,21 +340,24 @@ export default function Contracts({ contractName }) {
                             >
                               <div>
                                 <p className="text-lg font-extrabold">
-                                  Nonce #{val.res.nonce}
+                                  Transaction{' '}
+                                  {(
+                                    contract['transactions'].length - idx
+                                  ).toString()}
                                 </p>
                               </div>
 
                               <div className="flex flex-col space-y-1">
                                 <p className="text-md font-bold">Hash</p>
                                 <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                  <p className="text-sm">{val.res.hash}</p>
+                                  <p className="text-sm">{val.hash}</p>
                                 </div>
                               </div>
 
                               <div className="flex flex-col space-y-1">
                                 <p className="text-md font-bold">From</p>
                                 <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                  <p className="text-sm">{val.res.from}</p>
+                                  <p className="text-sm">{val.from}</p>
                                 </div>
                               </div>
 
@@ -334,7 +365,7 @@ export default function Contracts({ contractName }) {
                                 <div className="flex flex-col space-y-1">
                                   <p className="text-md font-bold">Data</p>
                                   <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                    <p className="test-sm">{val.res.data}</p>
+                                    <p className="test-sm">{val.data}</p>
                                   </div>
                                 </div>
 
@@ -344,7 +375,7 @@ export default function Contracts({ contractName }) {
                                       Function
                                     </p>
                                     <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className='text-sm'>
+                                      <p className="text-sm">
                                         {val.functionName}(
                                         {val.params.length > 0 ? '' : ' '}){' '}
                                         {val.stateMutability}

@@ -8,8 +8,9 @@ export function TextInputs({
   val,
   idxOne,
   getBalance,
+  getTransactions,
   deployContract,
-  getHistoricalTransactions,
+  contractName,
 }) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
@@ -20,9 +21,12 @@ export function TextInputs({
 
   // Update fees when a trasaction gets executed
   useEffect(() => {
-    getBalance()
-    console.log('executing tx')
-  }, [])
+    update()
+  }, [executingTransaction])
+
+  async function update() {
+    Promise.all([getBalance(), getTransactions(contractName)])
+  }
 
   // index[0] === the param value
   // index[1] === the param type
@@ -187,7 +191,7 @@ export function TextInputs({
 
             if (val.type === 'constructor') {
               name = 'constructor'
-              console.log('WHAT IS BEING PASSED IN? ', inputs)
+              // TODO: FIX THIS FOR CONSTRUCTORS
               await deployContract(inputs)
               return
             }
@@ -203,6 +207,7 @@ export function TextInputs({
                 stateMutability: val.stateMutability,
                 type: val.type,
                 amount: amount,
+                contractName: contractName,
               }),
             })
 
@@ -213,7 +218,6 @@ export function TextInputs({
                 ? `${jsonParsed['result']}`
                 : 'Transaction successful.'
               setOutput(showOutput)
-              getHistoricalTransactions()
             } else if (res.status === 500) {
               setExecutionError(JSON.stringify(jsonParsed['error']))
             }
