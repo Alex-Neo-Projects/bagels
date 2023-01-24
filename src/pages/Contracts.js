@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
+import { Link } from 'wouter'
 
 export default function Contracts({ contractName }) {
   const [balances, setBalances] = useState()
@@ -201,6 +202,16 @@ export default function Contracts({ contractName }) {
   return (
     <Header>
       <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
+        <div className="px-2">
+          <Link href="/">
+            <button className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]">
+              <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
+                <p>Contracts</p>
+              </div>
+            </button>
+          </Link>
+        </div>
+
         <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {!abiState || !balances ? (
