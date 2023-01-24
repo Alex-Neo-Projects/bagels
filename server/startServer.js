@@ -199,6 +199,7 @@ async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
 
+    console.log('file: ', file)
     let input = {
       language: 'Solidity',
       sources: {
@@ -215,7 +216,12 @@ async function compileContract(file) {
       },
     }
 
-    console.log('B4 compile!!!!');
+    // let output; 
+    // solc.loadRemoteVersion('v0.5.16+commit.9c3226ce', function(err, solcSnapshot) {
+    //   output = JSON.parse(
+    //     solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
+    //   ) 
+    // });
 
     let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
