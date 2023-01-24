@@ -15,7 +15,7 @@ contract BasicContract is MyParentContract {
     return theGreeting; 
   }
 
-  function setGreeting(string memory newGreeting) public { 
+  function setGreeting(string memory newGreeting, string memory hello) public { 
     theGreeting = newGreeting; 
   }
 }

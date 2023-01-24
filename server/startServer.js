@@ -131,7 +131,12 @@ app.post('/executeTransaction', async (req, res) => {
       const functionResult = await eval(callFunctionString)
 
       if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
-        historicalTransactions.unshift(functionResult)
+        historicalTransactions.unshift({
+          res: functionResult,
+          functionName: functionName,
+          params: params,
+          stateMutability: stateMutability,
+        })
       }
 
       return res.send({

@@ -324,7 +324,7 @@ export default function Contracts({ contractName }) {
                     <div className="flex flex-col space-y-2">
                       {transactions.length > 0 ? (
                         transactions.map((val, idx) => {
-                          console.log(val)
+                          console.log(val.params)
                           return (
                             <div
                               key={idx.toString()}
@@ -333,23 +333,57 @@ export default function Contracts({ contractName }) {
                               <div>
                                 <p className="text-lg font-extrabold">
                                   Nonce #{''}
-                                  {val.nonce}
+                                  {val.res.nonce}
                                 </p>
                               </div>
 
                               <div className="flex flex-col">
                                 <p className="text-md font-bold">Hash:</p>
-                                <p>{val.hash}</p>
+                                <p>{val.res.hash}</p>
                               </div>
 
                               <div className="flex flex-col">
                                 <p className="text-md font-bold">From:</p>
-                                <p>{val.from}</p>
+                                <p>{val.res.from}</p>
                               </div>
 
-                              <div className="flex flex-col">
-                                <p className="text-md font-bold">Data:</p>
-                                <p>{val.data}</p>
+                              <div className="flex flex-col space-y-2">
+                                <div className="flex flex-col">
+                                  <p className="text-md font-bold">Data:</p>
+                                  <p>{val.res.data}</p>
+                                </div>
+
+                                <div className="flex flex-col space-y-2 pl-2">
+                                  <div className="flex flex-col">
+                                    <p className="text-md font-bold">
+                                      Function:
+                                    </p>
+                                    <p>
+                                      {val.functionName}(
+                                      {val.params.length > 0 ? '...' : ' '}){' '}
+                                      {val.stateMutability}
+                                    </p>
+                                  </div>
+
+                                  <div className="flex flex-col">
+                                    <p className="text-md font-bold">Params:</p>
+
+                                    <div className='space-y-4'>
+                                      {val.params.map((param, paramsVal) => {
+                                        return (
+                                          <div className="pl-2">
+                                            <p className="text-sm font-bold">
+                                              value: {param[0]}
+                                            </p>
+                                            <p className="text-sm font-bold">
+                                              type: {param[1]}
+                                            </p>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )
