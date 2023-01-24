@@ -298,7 +298,7 @@ export default function Contracts({ contractName }) {
                           return (
                             <div
                               key={idx.toString()}
-                              className="space-y-3 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
+                              className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
                             >
                               <div>
                                 <p className="text-lg font-extrabold">
@@ -306,47 +306,76 @@ export default function Contracts({ contractName }) {
                                 </p>
                               </div>
 
-                              <div className="flex flex-col">
-                                <p className="text-md font-bold">Hash:</p>
-                                <p>{val.res.hash}</p>
+                              <div className="flex flex-col space-y-1">
+                                <p className="text-md font-bold">Hash</p>
+                                <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                  <p className="text-sm">{val.res.hash}</p>
+                                </div>
                               </div>
 
-                              <div className="flex flex-col">
-                                <p className="text-md font-bold">From:</p>
-                                <p>{val.res.from}</p>
+                              <div className="flex flex-col space-y-1">
+                                <p className="text-md font-bold">From</p>
+                                <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                  <p className="text-sm">{val.res.from}</p>
+                                </div>
                               </div>
 
-                              <div className="flex flex-col space-y-2">
-                                <div className="flex flex-col">
-                                  <p className="text-md font-bold">Data:</p>
-                                  <p>{val.res.data}</p>
+                              <div className="flex flex-col space-y-4">
+                                <div className="flex flex-col space-y-1">
+                                  <p className="text-md font-bold">Data</p>
+                                  <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                    <p className="test-sm">{val.res.data}</p>
+                                  </div>
                                 </div>
 
-                                <div className="flex flex-col space-y-2 pl-2">
-                                  <div className="flex flex-col">
+                                <div className="flex flex-col space-y-2">
+                                  <div className="flex flex-col space-y-1">
                                     <p className="text-md font-bold">
-                                      Function:
+                                      Function
                                     </p>
-                                    <p>
-                                      {val.functionName}(
-                                      {val.params.length > 0 ? '...' : ' '}){' '}
-                                      {val.stateMutability}
-                                    </p>
+                                    <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                      <p>
+                                        {val.functionName}(
+                                        {val.params.length > 0 ? '' : ' '}){' '}
+                                        {val.stateMutability}
+                                      </p>
+                                    </div>
                                   </div>
 
-                                  <div className="flex flex-col">
-                                    <p className="text-md font-bold">Params:</p>
+                                  <div className="flex flex-col space-y-2">
+                                    <p className="text-md font-bold">Params</p>
 
-                                    <div className="space-y-4">
+                                    <div className="space-y-8">
                                       {val.params.map((param, paramsVal) => {
                                         return (
-                                          <div className="pl-2">
-                                            <p className="text-sm font-bold">
-                                              value: {param[0]}
-                                            </p>
-                                            <p className="text-sm font-bold">
-                                              type: {param[1]}
-                                            </p>
+                                          <div className="pl-2 space-y-2">
+                                            <div className="flex flex-row space-x-4 justify-center items-center">
+                                              <div className="w-10 ">
+                                                <p className="text-sm font-bold">
+                                                  Value
+                                                </p>
+                                              </div>
+
+                                              <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                <p className="text-sm font-bold">
+                                                  {param[0]}
+                                                </p>
+                                              </div>
+                                            </div>
+
+                                            <div className="flex flex-row space-x-4 justify-center items-center">
+                                              <div className="w-10 ">
+                                                <p className="text-sm font-bold">
+                                                  Type
+                                                </p>
+                                              </div>
+
+                                              <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                <p className="text-sm font-bold">
+                                                  {param[1]}
+                                                </p>
+                                              </div>
+                                            </div>
                                           </div>
                                         )
                                       })}
