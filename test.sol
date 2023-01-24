@@ -17,7 +17,7 @@ contract NewContract {
     theGreeting = newGreeting; 
   }
 
-  function asdfasdf(string memory newGreeting) public payable { 
+  function asdfasdf(string memory newGreeting, string memory test) public payable { 
     theGreeting = newGreeting; 
   }
 }

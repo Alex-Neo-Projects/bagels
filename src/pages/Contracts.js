@@ -305,7 +305,6 @@ export default function Contracts({ contractName }) {
                     <div className="flex flex-col space-y-2">
                       {transactions.length > 0 ? (
                         transactions.map((val, idx) => {
-                          console.log(val.params)
                           return (
                             <div
                               key={idx.toString()}
@@ -319,14 +318,14 @@ export default function Contracts({ contractName }) {
 
                               <div className="flex flex-col space-y-1">
                                 <p className="text-md font-bold">Hash</p>
-                                <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
                                   <p className="text-sm">{val.res.hash}</p>
                                 </div>
                               </div>
 
                               <div className="flex flex-col space-y-1">
                                 <p className="text-md font-bold">From</p>
-                                <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
                                   <p className="text-sm">{val.res.from}</p>
                                 </div>
                               </div>
@@ -334,18 +333,18 @@ export default function Contracts({ contractName }) {
                               <div className="flex flex-col space-y-4">
                                 <div className="flex flex-col space-y-1">
                                   <p className="text-md font-bold">Data</p>
-                                  <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
+                                  <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
                                     <p className="test-sm">{val.res.data}</p>
                                   </div>
                                 </div>
 
-                                <div className="flex flex-col space-y-2">
+                                <div className="flex flex-col space-y-4">
                                   <div className="flex flex-col space-y-1">
                                     <p className="text-md font-bold">
                                       Function
                                     </p>
-                                    <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4">
-                                      <p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className='text-sm'>
                                         {val.functionName}(
                                         {val.params.length > 0 ? '' : ' '}){' '}
                                         {val.stateMutability}
@@ -356,18 +355,18 @@ export default function Contracts({ contractName }) {
                                   <div className="flex flex-col space-y-2">
                                     <p className="text-md font-bold">Params</p>
 
-                                    <div className="space-y-8">
+                                    <div className="space-y-6">
                                       {val.params.map((param, paramsVal) => {
                                         return (
                                           <div className="pl-2 space-y-2">
                                             <div className="flex flex-row space-x-4 justify-center items-center">
-                                              <div className="w-10 ">
+                                              <div className="w-10">
                                                 <p className="text-sm font-bold">
                                                   Value
                                                 </p>
                                               </div>
 
-                                              <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4 w-full">
+                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
                                                 <p className="text-sm font-bold">
                                                   {param[0]}
                                                 </p>
@@ -381,7 +380,7 @@ export default function Contracts({ contractName }) {
                                                 </p>
                                               </div>
 
-                                              <div className="rounded-lg bg-[#93939328] pl-3 pr-3 p-4 w-full">
+                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
                                                 <p className="text-sm font-bold">
                                                   {param[1]}
                                                 </p>
