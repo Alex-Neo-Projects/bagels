@@ -5,7 +5,6 @@ import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
-import fetch from 'node-fetch'
 import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -189,31 +188,6 @@ app.get('/getHistoricalContracts', async (req, res) => {
   }
 })
 
-// app.get('/getTransaction', async (req, res) => {
-//   const { transactionHash } = req.query
-
-//   try {
-//     const val = await fetch('http://127.0.0.1:8545', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify({
-//         jsonrpc: '2.0',
-//         method: 'eth_getTransactionReceipt',
-//         params: [transactionHash],
-//         id: 1,
-//       }),
-//     })
-
-//     const parsed_val = await val.json()
-//     return res.status(200).send(parsed_val)
-//   } catch (e) {
-//     console.error(`Error getting tx: ${e.message}`)
-//     return res.status(500).send({ error: e })
-//   }
-// })
-
 app.listen(PORT)
 
 async function compileContract(file) {
@@ -302,32 +276,63 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
+// Note: There HAS to be a better way to do this. But this is an initial first attempt, so I can figure out what a better solution could look like
+// Finding imports explantion:
+// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure): 
+  // test.sol
+  // node_modules/
+// outsideNodeModulesImportPath == the contract is nested compared to the node modules: 
+  // contracts/
+    // test.sol
+  // node_modules/
+// Man, file systems SUCK.
 function findImports(filePath) {
   try {
-    // Find the contract import in node_modules
-    let importInNodeModules = getFilepath([
-      getPathDirname(),
+
+    let nodeModulesFlatImportPath = getFilepath([
+      userRealDirectory,
       'node_modules',
       filePath,
     ])
 
-    let filesInCurrentDir = fs.readdirSync(getFilepath([getPathDirname()]))
+    let nodeModulesNestedImportPath = getFilepath([
+      path.join(userRealDirectory, '..'),
+      'node_modules',
+      filePath,
+    ])
 
-    let file
+    let forgeFlatLibImportPath = getFilepath([
+      userRealDirectory,
+      'lib',
+      filePath,
+    ])
 
+    let forgeNestedLibImportPath = getFilepath([
+      path.join(userRealDirectory, '..'),
+      'lib',
+      filePath,
+    ])
+
+    let fileInCurrentDir = path.join(userRealDirectory, filePath);
+
+    let file;
+    
     // Import is another contract in the current directory
-    let fileIndex = filesInCurrentDir.findIndex((item) => item === filePath)
-
-    if (fileIndex !== -1) {
-      let contractFilePath = getFilepath([
-        getPathDirname(),
-        filesInCurrentDir[fileIndex],
-      ])
-      file = fs.readFileSync(contractFilePath)
+    if (fs.existsSync(fileInCurrentDir)) {
+      file = fs.readFileSync(fileInCurrentDir)
     }
-    // Import is a file in the node_modules folder
     else {
-      file = fs.readFileSync(importInNodeModules)
+      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath);
+      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath);
+
+      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath); 
+      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath); 
+
+      if (isNodeModulesImportFlat) file = fs.readFileSync(nodeModulesFlatImportPath);
+      else if (isNodeModulesImportNested) file = fs.readFileSync(nodeModulesNestedImportPath);
+      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath);
+      else if (isForgeImportNested) file = fs.readFileSync(forgeNestedLibImportPath);
+      else throw Error(`Couldn't find the import ${filePath}`)
     }
 
     return {

@@ -67,10 +67,13 @@ export default function Home() {
             )}
 
             {!loading && solidityFiles.length === 0 && (
-              <div className="flex justify-center items-center pt-10 pb-10">
-                <p className="text-md text-bold">
-                  No solidity files found in this directory 🫡
+              <div className="flex-row justify-center align-center pt-3 pb-10">
+                <p className="text-md text-bold text-center">
+                  No solidity files found in this directory 😩
                 </p>
+                <h1 className="text-md text-bold pt-8 text-center">
+                  Are you running bagels from your contracts/ directory?
+                </h1>
               </div>
             )}
 
