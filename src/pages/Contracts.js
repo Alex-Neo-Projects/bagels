@@ -202,17 +202,14 @@ export default function Contracts({ contractName }) {
     <Header>
       <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
         <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-          <div className=" text-white block border border-[#333333] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
-            {!abiState ||
-              (!balances && (
-                <div className="mt-2 mb-2 max-w-lg space-y-6">
-                  <p className="text-xl tracking-tighter text-left font-bold">
-                    Loading {contractName}
-                  </p>
-                </div>
-              ))}
-
-            {constructorIndex > -1 && !constructorDeployed ? (
+          <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            {!abiState || !balances ? (
+              <div className="max-w-lg">
+                <p className="text-md tracking-tighter text-left font-bold">
+                  Loading {contractName}
+                </p>
+              </div>
+            ) : constructorIndex > -1 && !constructorDeployed ? (
               <div className="flex flex-col justify-start space-y-4">
                 <p className="text-xl font-medium">Enter constructors:</p>
                 <TextInputs
@@ -223,31 +220,16 @@ export default function Contracts({ contractName }) {
                 />
               </div>
             ) : (
-              <div className="flex flex-col justify-start space-y-4">
+              <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
-                  <div>
-                    <a href="/">
-                      <img
-                        className="justify-center items-center"
-                        src="https://cdn-icons-png.flaticon.com/512/93/93634.png"
-                        height={25}
-                        width={25}
-                      />
-                    </a>
-                  </div>
-
-                  <div className="pl-4">
-                    <h1 className="text-xl tracking-tighter text-left font-bold">
-                      Contract {contractNameState || ''}
-                    </h1>
-                  </div>
+                  <h1 className="text-xl tracking-tighter text-left font-bold">
+                    Contract {contractNameState || ''}
+                  </h1>
                 </div>
 
-                <div className="flex flex-col space-y-4">
+                <div className="flex flex-col space-y-2">
                   <div className="space-y-1">
-                    <p className="text-xl font-medium">
-                      Connected to wallet with address:
-                    </p>
+                    <p className="text-xl font-medium">Wallet address</p>
                     <p className="text-sm">
                       0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
                     </p>
@@ -255,45 +237,37 @@ export default function Contracts({ contractName }) {
                 </div>
 
                 <div className="flex flex-col space-y-1">
-                  <p className="text-xl font-medium">Address Balance:</p>
-                  <p className="text-md">eth: {balances?.balances?.eth}</p>
+                  <p className="text-xl font-medium">Address Balance</p>
+                  <p className="text-md">ETH: {balances?.balances?.eth}</p>
                 </div>
 
                 <div className="flex flex-col">
-                  <p className="text-xl font-medium">ABI:</p>
+                  <p className="text-xl font-medium">ABI</p>
 
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-3">
                     {abiState &&
                       contractNameState &&
-                      abiState[contractNameState]
-                        .sort((a, b) => {
-                          if (a.stateMutability === 'view') {
-                            return -1
-                          }
-                          if (b.stateMutability === 'view') {
-                            return 1
-                          }
-                          return 0
-                        })
-                        .map((val, idx) => {
-                          return (
-                            <div key={idx.toString()}>
+                      abiState[contractNameState].map((val, idx) => {
+                        return (
+                          <div key={idx.toString()} className="space-y-2">
+                            <div>
                               <p className="text-md font-bold mt-2">
                                 {renderFunctionHeader(val)}
                               </p>
-
-                              <TextInputs
-                                val={val}
-                                idxOne={idx}
-                                getBalance={getBalance}
-                                deployContract={TextInputDeployContract}
-                                getHistoricalTransactions={
-                                  getHistoricalTransactions
-                                }
-                              />
                             </div>
-                          )
-                        })}
+
+                            <TextInputs
+                              val={val}
+                              idxOne={idx}
+                              getBalance={getBalance}
+                              deployContract={TextInputDeployContract}
+                              getHistoricalTransactions={
+                                getHistoricalTransactions
+                              }
+                            />
+                          </div>
+                        )
+                      })}
                   </div>
                 </div>
               </div>
@@ -303,10 +277,10 @@ export default function Contracts({ contractName }) {
 
         <div className="flex flex-col space-y-4">
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-            <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
                 {/* Transaction TEMPLATE */}
-                <div className="flex flex-col justify-start items-start space-y-2">
+                <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
                     <h1 className="text-xl tracking-tighter text-left font-bold">
                       Transactions
@@ -324,12 +298,11 @@ export default function Contracts({ contractName }) {
                           return (
                             <div
                               key={idx.toString()}
-                              className="space-y-3 p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl break-all overflow-hidden"
+                              className="space-y-3 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
                             >
                               <div>
                                 <p className="text-lg font-extrabold">
-                                  Nonce #{''}
-                                  {val.res.nonce}
+                                  Nonce #{val.res.nonce}
                                 </p>
                               </div>
 
@@ -364,7 +337,7 @@ export default function Contracts({ contractName }) {
                                   <div className="flex flex-col">
                                     <p className="text-md font-bold">Params:</p>
 
-                                    <div className='space-y-4'>
+                                    <div className="space-y-4">
                                       {val.params.map((param, paramsVal) => {
                                         return (
                                           <div className="pl-2">

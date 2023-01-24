@@ -68,7 +68,7 @@ export default function Home() {
 
             {!loading && solidityFiles.length === 0 && (
               <div className="flex flex-col justify-start items-start pt-3 pb-10">
-                <p className="text-md text-bold text-center  pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
+                <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
                   Uh oh, we aren't able to find any solidity files in this
                   directory.
                 </p>
