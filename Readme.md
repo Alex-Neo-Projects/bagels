@@ -22,8 +22,7 @@ bun -g i bagels
 ```
 
 #### Running bagels: 
-1) `cd` into your contracts folder 
-2) run `bagels`
+1) run `bagels` in your project root
 
 ##### Coming soon:
 - Fund your wallet/contract with various ERC20 tokens starting with USDC (WIP)

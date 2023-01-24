@@ -25,6 +25,8 @@ app.use(cors())
 
 let client
 let globalContract;
+let node_modulesDirLocation = ''; 
+let libDirLocation = '';
 let solidityFileDirMappings = {};
 let globalAbis = {}
 
@@ -58,12 +60,15 @@ function getAllFiles(dirPath, arrayOfFiles) {
   arrayOfFiles = arrayOfFiles || []
 
   files.forEach(function(file) {
-    if (file.includes('node_modules')) return;
-    else if (file.includes('lib')) return;
+    // Keep track of node_modules folder location (for use in imports) and return (no need to scan entire node_modules folder)
+    if (file.includes('node_modules')) {node_modulesDirLocation = path.join(dirPath, "/", file); return}
+    // Same as above for lib/ (used in forge);
+    else if (file.includes('lib')) {libDirLocation = path.join(dirPath, "/", file); return}
     else if (fs.statSync(dirPath + "/" + file).isDirectory()) {
       arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles)
     } else {
-      if (file.split('.').pop() === 'sol') arrayOfFiles.push(path.join(dirPath, "/", file))
+      // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
+      if (file.split('.').pop() === 'sol' && file.split('.').length === 2) arrayOfFiles.push(path.join(dirPath, "/", file))
     }
   })
 
@@ -210,6 +215,8 @@ async function compileContract(file) {
       },
     }
 
+    console.log('B4 compile!!!!');
+
     let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
@@ -255,8 +262,6 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   deploymentString += ')'
 
-  console.log('b4 eval: ', deploymentString)
-
   const contract = await eval(deploymentString)
   console.log('Deployed Contract')
 
@@ -274,64 +279,25 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
-// Note: There HAS to be a better way to do this. But this is an initial first attempt, so I can figure out what a better solution could look like
-// Finding imports explantion:
-// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure): 
-  // test.sol
-  // node_modules/
-// outsideNodeModulesImportPath == the contract is nested compared to the node modules: 
-  // contracts/
-    // test.sol
-  // node_modules/
-// Man, file systems SUCK.
-function findImports(filePath) {
+function findImports(fileName) {
   try {
-    console.log(filePath);
-    
-    let nodeModulesFlatImportPath = getFilepath([
-      userRealDirectory,
-      'node_modules',
-      filePath,
-    ])
-
-    let nodeModulesNestedImportPath = getFilepath([
-      path.join(userRealDirectory, '..'),
-      'node_modules',
-      filePath,
-    ])
-
-    let forgeFlatLibImportPath = getFilepath([
-      userRealDirectory,
-      'lib',
-      filePath,
-    ])
-
-    let forgeNestedLibImportPath = getFilepath([
-      path.join(userRealDirectory, '..'),
-      'lib',
-      filePath,
-    ])
-
-    let fileInCurrentDir = path.join(userRealDirectory, filePath);
+    console.log('\n\n\n\n file name: ', fileName); 
 
     let file;
     
-    // Import is another contract in the current directory
-    if (fs.existsSync(fileInCurrentDir)) {
-      file = fs.readFileSync(fileInCurrentDir)
+    // Import is another contract somewhere inside the root directory
+    if (fs.existsSync(solidityFileDirMappings[fileName])) {
+      file = fs.readFileSync(solidityFileDirMappings[fileName])
     }
     else {
-      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath);
-      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath);
+      let nodePackagePath = path.join(node_modulesDirLocation, fileName)
+      let forgePackagePath = path.join(libDirLocation, fileName); 
 
-      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath); 
-      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath); 
-
-      if (isNodeModulesImportFlat) file = fs.readFileSync(nodeModulesFlatImportPath);
-      else if (isNodeModulesImportNested) file = fs.readFileSync(nodeModulesNestedImportPath);
-      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath);
-      else if (isForgeImportNested) file = fs.readFileSync(forgeNestedLibImportPath);
-      else throw Error(`Couldn't find the import ${filePath}`)
+      if (fs.existsSync(nodePackagePath)) {
+        file = fs.readFileSync(nodePackagePath);
+      } else if (fs.existsSync(forgePackagePath)) { 
+        file = fs.readFileSync(forgePackagePath); 
+      } else throw Error(`Couldn't find the import ${filePath}`)
     }
 
     return {
