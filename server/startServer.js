@@ -27,6 +27,9 @@ let client
 let globalContract
 let globalAbis = {}
 
+let historicalContracts = []
+let historicalTransactions = []
+
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
@@ -36,7 +39,6 @@ app.get('/solidityFiles', async (req, res) => {
     const files = fs.readdirSync(userRealDirectory)
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
 
-    console.log('done getting')
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
     return res.status(500).send({ error: e })
@@ -50,6 +52,7 @@ app.post('/deployContract', async (req, res) => {
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
 
     globalContract = contract
+    historicalContracts.unshift(contract)
 
     return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
@@ -66,7 +69,6 @@ app.get('/abi', async (req, res) => {
     globalAbis = abis
     return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
   } catch (e) {
-    console.log(e)
     return res.status(500).send({ error: e })
   }
 })
@@ -125,9 +127,16 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
-      // console.log(callFunctionString)
-
       const functionResult = await eval(callFunctionString)
+
+      if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
+        historicalTransactions.unshift({
+          res: functionResult,
+          functionName: functionName,
+          params: params,
+          stateMutability: stateMutability,
+        })
+      }
 
       return res.send({
         result: functionResult[0] ? functionResult[0].toString() : '',
@@ -159,6 +168,24 @@ app.get('/subscribeToChanges', async (req, res) => {
 app.post('/test', (req, res) => {
   refreshFrontend()
   res.send(200)
+})
+
+app.get('/getHistoricalTransactions', async (req, res) => {
+  try {
+    return res
+      .status(200)
+      .send({ historicalTransactions: historicalTransactions })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
+
+app.get('/getHistoricalContracts', async (req, res) => {
+  try {
+    return res.status(200).send({ historicalContracts: historicalContracts })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
 })
 
 app.listen(PORT)
@@ -200,7 +227,9 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    throw new Error(`Couldn't compile contract ${file} because of error: ${e}`)
+    throw new Error(
+      `Couldn't compile contract ${file} because of error: ${e.message}`,
+    )
   }
 }
 
@@ -229,8 +258,6 @@ async function deployContracts(abis, bytecodes, constructor) {
   }
 
   deploymentString += ')'
-
-  console.log('b4 eval: ', deploymentString)
 
   const contract = await eval(deploymentString)
   console.log('Deployed Contract')
