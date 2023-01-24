@@ -202,14 +202,9 @@ app.post('/transactions', async (req, res) => {
   try {
     const { contractName } = req.body
 
-    console.log(contractName)
-    console.log(!(contractName in contracts))
-
     if (!(contractName in contracts)) {
       throw new Error('Contract does not exist, try again')
     }
-
-    console.log(contracts[contractName])
 
     return res.status(200).send({ transactions: contracts[contractName]['transactions'] })
   } catch (e) {
