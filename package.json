@@ -13,7 +13,7 @@
     "./utils.js"
   ],
   "scripts": {
-    "preinstall": "bun preinstall.js",
+    "preinstall": "node preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.js",
@@ -39,6 +39,7 @@
     "ethers": "^5.7.2",
     "express": "^4.18.2",
     "open": "^8.4.0",
+    "ora": "^6.1.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "solc": "^0.8.17",

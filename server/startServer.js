@@ -195,11 +195,26 @@ app.post('/test', (req, res) => {
 
 app.listen(PORT)
 
+async function compileSpecificSolVersion(input) {
+  return new Promise(async (resolve, reject) => { 
+    await solc.loadRemoteVersion('v0.5.16+commit.9c3226ce', function(err, solcSnapshot) {
+      if (err) { 
+        console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
+        reject(err);
+      } else {
+        let output = JSON.parse(
+          solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
+        ) 
+        resolve(output); 
+      }
+    }); 
+  })
+}
+
 async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
 
-    console.log('file: ', file)
     let input = {
       language: 'Solidity',
       sources: {
@@ -216,16 +231,13 @@ async function compileContract(file) {
       },
     }
 
-    // let output; 
-    // solc.loadRemoteVersion('v0.5.16+commit.9c3226ce', function(err, solcSnapshot) {
-    //   output = JSON.parse(
-    //     solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
-    //   ) 
-    // });
+    let output = await compileSpecificSolVersion(input); 
 
-    let output = JSON.parse(
-      solc.compile(JSON.stringify(input), { import: findImports }),
-    )
+    console.log('output: ', output); 
+    
+    // let output = JSON.parse(
+    //   solc.compile(JSON.stringify(input), { import: findImports }),
+    // )
 
     let abis = {}
     let byteCodes = {}
@@ -287,23 +299,29 @@ async function checkEtherBalance(provider, address) {
 
 function findImports(fileName) {
   try {
-    console.log('\n\n\n\n file name: ', fileName); 
+    // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
+    const justTheFileName = path.basename(fileName);
+    console.log(justTheFileName); 
+
+    console.log('finding: ', justTheFileName); 
+
+    console.log('file mappings: ', solidityFileDirMappings); 
 
     let file;
     
     // Import is another contract somewhere inside the root directory
-    if (fs.existsSync(solidityFileDirMappings[fileName])) {
-      file = fs.readFileSync(solidityFileDirMappings[fileName])
+    if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
+      file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
     }
     else {
-      let nodePackagePath = path.join(node_modulesDirLocation, fileName)
-      let forgePackagePath = path.join(libDirLocation, fileName); 
+      let nodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
+      let forgePackagePath = path.join(libDirLocation, justTheFileName); 
 
       if (fs.existsSync(nodePackagePath)) {
         file = fs.readFileSync(nodePackagePath);
       } else if (fs.existsSync(forgePackagePath)) { 
         file = fs.readFileSync(forgePackagePath); 
-      } else throw Error(`Couldn't find the import ${filePath}`)
+      } else throw Error(`Couldn't find the import ${file}`)
     }
 
     return {
