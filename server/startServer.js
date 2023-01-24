@@ -5,6 +5,7 @@ import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
+import fetch from 'node-fetch'
 import { getFilepath, getPathDirname } from '../utils.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -27,6 +28,9 @@ let client
 let globalContract
 let globalAbis = {}
 
+let historicalContracts = []
+let historicalTransactions = []
+
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
@@ -36,7 +40,6 @@ app.get('/solidityFiles', async (req, res) => {
     const files = fs.readdirSync(userRealDirectory)
     var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
 
-    console.log('done getting')
     return res.status(200).send({ files: solidityFiles })
   } catch (e) {
     return res.status(500).send({ error: e })
@@ -50,6 +53,7 @@ app.post('/deployContract', async (req, res) => {
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
 
     globalContract = contract
+    historicalContracts.unshift(contract)
 
     return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
@@ -66,7 +70,6 @@ app.get('/abi', async (req, res) => {
     globalAbis = abis
     return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
   } catch (e) {
-    console.log(e)
     return res.status(500).send({ error: e })
   }
 })
@@ -125,9 +128,11 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
-      // console.log(callFunctionString)
-
       const functionResult = await eval(callFunctionString)
+
+      if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
+        historicalTransactions.unshift(functionResult)
+      }
 
       return res.send({
         result: functionResult[0] ? functionResult[0].toString() : '',
@@ -160,6 +165,49 @@ app.post('/test', (req, res) => {
   refreshFrontend()
   res.send(200)
 })
+
+app.get('/getHistoricalTransactions', async (req, res) => {
+  try {
+    return res
+      .status(200)
+      .send({ historicalTransactions: historicalTransactions })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
+
+app.get('/getHistoricalContracts', async (req, res) => {
+  try {
+    return res.status(200).send({ historicalContracts: historicalContracts })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
+
+// app.get('/getTransaction', async (req, res) => {
+//   const { transactionHash } = req.query
+
+//   try {
+//     const val = await fetch('http://127.0.0.1:8545', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         jsonrpc: '2.0',
+//         method: 'eth_getTransactionReceipt',
+//         params: [transactionHash],
+//         id: 1,
+//       }),
+//     })
+
+//     const parsed_val = await val.json()
+//     return res.status(200).send(parsed_val)
+//   } catch (e) {
+//     console.error(`Error getting tx: ${e.message}`)
+//     return res.status(500).send({ error: e })
+//   }
+// })
 
 app.listen(PORT)
 
@@ -200,7 +248,9 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    throw new Error(`Couldn't compile contract ${file} because of error: ${e}`)
+    throw new Error(
+      `Couldn't compile contract ${file} because of error: ${e.message}`,
+    )
   }
 }
 
@@ -230,8 +280,6 @@ async function deployContracts(abis, bytecodes, constructor) {
 
   deploymentString += ')'
 
-  console.log('b4 eval: ', deploymentString)
-
   const contract = await eval(deploymentString)
   console.log('Deployed Contract')
 
@@ -258,11 +306,8 @@ function findImports(filePath) {
       filePath,
     ])
 
-    
-    let filesInCurrentDir = fs.readdirSync(
-      getFilepath([getPathDirname()]),
-    )
-    
+    let filesInCurrentDir = fs.readdirSync(getFilepath([getPathDirname()]))
+
     let file
 
     // Import is another contract in the current directory

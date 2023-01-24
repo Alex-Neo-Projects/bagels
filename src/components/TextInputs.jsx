@@ -4,7 +4,7 @@ import { SERVER_URL } from '../constants'
 
 const PORT = 9090
 
-export function TextInputs({ val, idxOne, getBalance, deployContract }) {
+export function TextInputs({ val, idxOne, getBalance, deployContract, getHistoricalTransactions }) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
@@ -207,6 +207,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract }) {
                 ? `${jsonParsed['result']}`
                 : 'Transaction successful.'
               setOutput(showOutput)
+              getHistoricalTransactions()
             } else if (res.status === 500) {
               setExecutionError(JSON.stringify(jsonParsed['error']))
             }

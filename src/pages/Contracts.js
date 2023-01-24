@@ -9,6 +9,9 @@ export default function Contracts({ contractName }) {
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
 
+  const [transactions, setTransactions] = useState([])
+  const [contracts, setContracts] = useState([])
+
   const [contractNameState, setContractNameState] = useState()
   const [bytecodeState, setBytecodeState] = useState()
 
@@ -19,7 +22,11 @@ export default function Contracts({ contractName }) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
 
       events.onmessage = (event) => {
-        init()
+        try {
+          init()
+        } catch (e) {
+          console.log(e.message)
+        }
       }
 
       setListening(true)
@@ -27,7 +34,15 @@ export default function Contracts({ contractName }) {
   }, [listening])
 
   async function init() {
-    await getBalance()
+    Promise.all([
+      getBalance(),
+      getHistoricalTransactions(),
+      getHistoricalContracts(),
+    ])
+
+    // await getBalance()
+    // await getHistoricalTransactions()
+    // await getHistoricalContracts()
 
     const { returnedAbi, bytecode } = await getABI()
 
@@ -49,6 +64,33 @@ export default function Contracts({ contractName }) {
     const jsonifiedBalance = await balance.json()
 
     setBalances({ balances: jsonifiedBalance })
+  }
+
+  async function getHistoricalTransactions() {
+    try {
+      const transactions = await fetch(
+        `${SERVER_URL}/getHistoricalTransactions`,
+        {
+          method: 'GET',
+        },
+      )
+      const jsonifiedTransactions = await transactions.json()
+      setTransactions(jsonifiedTransactions.historicalTransactions)
+    } catch (e) {
+      console.error(e.message)
+    }
+  }
+
+  async function getHistoricalContracts() {
+    try {
+      const contracts = await fetch(`${SERVER_URL}/getHistoricalContracts`, {
+        method: 'GET',
+      })
+      const jsonifiedContracts = await contracts.json()
+      setContracts(jsonifiedContracts.historicalContracts)
+    } catch (e) {
+      console.error(e.message)
+    }
   }
 
   function getConstructorAbiIndex(abi) {
@@ -90,27 +132,31 @@ export default function Contracts({ contractName }) {
   }
 
   async function getABI() {
-    console.log(`${SERVER_URL}/abi?contractName=${contractName} `)
+    try {
+      console.log(`${SERVER_URL}/abi?contractName=${contractName} `)
 
-    const abiAndBytecode = await fetch(
-      `${SERVER_URL}/abi?contractName=${contractName}`,
-      {
-        method: 'GET',
-      },
-    )
+      const abiAndBytecode = await fetch(
+        `${SERVER_URL}/abi?contractName=${contractName}`,
+        {
+          method: 'GET',
+        },
+      )
 
-    const jsonifiedAbiAndBytecode = await abiAndBytecode.json()
+      const jsonifiedAbiAndBytecode = await abiAndBytecode.json()
 
-    const contractNameFromAbi = Object.keys(jsonifiedAbiAndBytecode['abi'])[0]
+      const contractNameFromAbi = Object.keys(jsonifiedAbiAndBytecode['abi'])[0]
 
-    setContractNameState(contractNameFromAbi)
+      setContractNameState(contractNameFromAbi)
 
-    setAbiState(jsonifiedAbiAndBytecode['abi'])
-    setBytecodeState(jsonifiedAbiAndBytecode['bytecode'])
+      setAbiState(jsonifiedAbiAndBytecode['abi'])
+      setBytecodeState(jsonifiedAbiAndBytecode['bytecode'])
 
-    return {
-      returnedAbi: jsonifiedAbiAndBytecode['abi'],
-      bytecode: jsonifiedAbiAndBytecode['bytecode'],
+      return {
+        returnedAbi: jsonifiedAbiAndBytecode['abi'],
+        bytecode: jsonifiedAbiAndBytecode['bytecode'],
+      }
+    } catch (e) {
+      console.error(e.message)
     }
   }
 
@@ -158,8 +204,8 @@ export default function Contracts({ contractName }) {
 
   return (
     <Header>
-      <div className="flex flex-col w-full justify-center items-center space-y-10 overflow-auto">
-        <div className="flex w-screen max-w-[40em]">
+      <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
+        <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
           <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {!abiState ||
               (!balances && (
@@ -245,6 +291,9 @@ export default function Contracts({ contractName }) {
                                 idxOne={idx}
                                 getBalance={getBalance}
                                 deployContract={TextInputDeployContract}
+                                getHistoricalTransactions={
+                                  getHistoricalTransactions
+                                }
                               />
                             </div>
                           )
@@ -253,6 +302,131 @@ export default function Contracts({ contractName }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="flex flex-col space-y-4">
+          <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
+            <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+              <div className="flex flex-col justify-start space-y-4">
+                {/* CONTRACT TEMPLATE */}
+                <div className="flex flex-col justify-start items-start space-y-2">
+                  <div className="flex flex-col">
+                    <h1 className="text-xl tracking-tighter text-left font-bold">
+                      Contract Deployments
+                    </h1>
+                    <p className="text-sm font-medium">
+                      Your contract deployments throughout the development of
+                      your contract.
+                    </p>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex flex-col space-y-2">
+                      {contracts.length > 0 ? (
+                        <div className="space-y-3 p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl break-all overflow-hidden">
+                          <div>
+                            <p className="text-lg font-extrabold">
+                              Version {contracts.length.toString()}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col ">
+                            <p className="text-md font-bold">
+                              Deployer Address:
+                            </p>
+                            <p>{contracts[0].deployTransaction.from}</p>
+                          </div>
+
+                          <div className="flex flex-col">
+                            <p className="text-md font-bold">
+                              Contract Address:
+                            </p>
+                            <p>{contracts[0].address}</p>
+                          </div>
+
+                          <div className="flex flex-col">
+                            <p className="text-md font-bold">
+                              Transaction Hash:
+                            </p>
+                            <p>{contracts[0].deployTransaction.hash}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="pt-4">
+                          <p>No Contract Deployments Found</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
+            <div className="bg-white text-black block rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+              <div className="flex flex-col justify-start space-y-4">
+                {/* Transaction TEMPLATE */}
+                <div className="flex flex-col justify-start items-start space-y-2">
+                  <div className="flex flex-col">
+                    <h1 className="text-xl tracking-tighter text-left font-bold">
+                      Transactions
+                    </h1>
+                    <p className="text-sm font-medium">
+                      Your transactions throughout the development of your
+                      contract.
+                    </p>
+                  </div>
+                  <div className="flex flex-col">
+                    <div className="flex flex-col space-y-2">
+                      {transactions.length > 0 ? (
+                        transactions.map((val, idx) => {
+                          console.log(val)
+                          return (
+                            <div
+                              key={idx.toString()}
+                              className="space-y-3 p-4 pl-4 pr-4 border border-[#E4E4E474] rounded-2xl break-all overflow-hidden"
+                            >
+                              <div>
+                                <p className="text-lg font-extrabold">
+                                  Nonce #{''}
+                                  {val.nonce}
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col">
+                                <p className="text-md font-bold">
+                                  Hash:
+                                </p>
+                                <p>{val.hash}</p>
+                              </div>
+
+                              <div className="flex flex-col">
+                                <p className="text-md font-bold">
+                                  From:
+                                </p>
+                                <p>{val.from}</p>
+                              </div>
+
+                              <div className="flex flex-col">
+                                <p className="text-md font-bold">
+                                  Data:
+                                </p>
+                                <p>{val.data}</p>
+                              </div>
+                            </div>
+                          )
+                        })
+                      ) : (
+                        <div className="pt-4">
+                          <p>No Transactions Found</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
