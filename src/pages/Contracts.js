@@ -40,10 +40,6 @@ export default function Contracts({ contractName }) {
       getHistoricalContracts(),
     ])
 
-    // await getBalance()
-    // await getHistoricalTransactions()
-    // await getHistoricalContracts()
-
     const { returnedAbi, bytecode } = await getABI()
 
     let constructorIndex = getConstructorAbiIndex(returnedAbi)
