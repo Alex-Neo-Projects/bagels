@@ -33,6 +33,9 @@ let libDirLocation = '';
 let solidityFileDirMappings = {};
 let globalAbis = {}
 
+let historicalContracts = []
+let historicalTransactions = []
+
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
@@ -85,6 +88,7 @@ app.post('/deployContract', async (req, res) => {
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
 
     globalContract = contract
+    historicalContracts.unshift(contract)
 
     return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
@@ -101,7 +105,6 @@ app.get('/abi', async (req, res) => {
     globalAbis = abis
     return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
   } catch (e) {
-    console.log(e)
     return res.status(500).send({ error: e })
   }
 })
@@ -160,9 +163,16 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
-      // console.log(callFunctionString)
-
       const functionResult = await eval(callFunctionString)
+
+      if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
+        historicalTransactions.unshift({
+          res: functionResult,
+          functionName: functionName,
+          params: params,
+          stateMutability: stateMutability,
+        })
+      }
 
       return res.send({
         result: functionResult[0] ? functionResult[0].toString() : '',
@@ -194,6 +204,24 @@ app.get('/subscribeToChanges', async (req, res) => {
 app.post('/test', (req, res) => {
   refreshFrontend()
   res.send(200)
+})
+
+app.get('/getHistoricalTransactions', async (req, res) => {
+  try {
+    return res
+      .status(200)
+      .send({ historicalTransactions: historicalTransactions })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
+})
+
+app.get('/getHistoricalContracts', async (req, res) => {
+  try {
+    return res.status(200).send({ historicalContracts: historicalContracts })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
 })
 
 app.listen(PORT)
@@ -248,26 +276,26 @@ async function compileContract(file) {
       },
     }
 
-    // console.time('exec')
-    // Format looks like: 0.8.17+commit.8df45f5f.Emscripten.clang
+    
+    console.time('exec')
+    let output;
+    
+    // Find specific solc version (slow, so commented out for now)
     // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
     // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang'; 
-    // console.timeEnd('exec')
+
     // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
-
-    let output;
-
-    // Invalid solc version installed, need to pick a valid one, install it, and compile the contract w/ that. 
     // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
     //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
     //   output = await compileSpecificSolVersion(input, validSolcVersion);
     // }
-    // Installed solc version is already valid
-    // else {
-      output = JSON.parse(
-        solc.compile(JSON.stringify(input), { import: findImports }),
-      )
-    // }
+
+    output = JSON.parse(
+      solc.compile(JSON.stringify(input), { import: findImports }),
+    )
+
+    console.log('output is: ', output)
+    console.timeEnd('exec')
 
     let abis = {}
     let byteCodes = {}
@@ -281,7 +309,10 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    throw new Error(`Couldn't compile contract ${file} because of error: ${e}`)
+    console.log('e: ', e); 
+    throw new Error(
+      `Couldn't compile contract ${file} because of error: ${e.message}`,
+    )
   }
 }
 
