@@ -9,7 +9,7 @@ Features:
 - Instantly see contract changes via the UI
 - Also, this works with your existing testing framework! (Use it w/ hardhat or forge)
 
-**The goal of bagels is to make writing and playing with smart contracts feel like a videogame**
+**The goal of bagels is to make writing, iterating, and playing with smart contracts as fast as making a site using modern web dev tools.**
 
 #### Installation setup:
 ```
