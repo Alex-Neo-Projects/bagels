@@ -248,24 +248,26 @@ async function compileContract(file) {
       },
     }
 
+    // console.time('exec')
     // Format looks like: 0.8.17+commit.8df45f5f.Emscripten.clang
-    const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
-
-    const contractSolcVersion = getSolcVersionFromContract(fileAsString);
+    // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
+    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang'; 
+    // console.timeEnd('exec')
+    // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
 
     let output;
 
     // Invalid solc version installed, need to pick a valid one, install it, and compile the contract w/ that. 
-    if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
-      const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
-      output = await compileSpecificSolVersion(input, validSolcVersion);
-    }
+    // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
+    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
+    //   output = await compileSpecificSolVersion(input, validSolcVersion);
+    // }
     // Installed solc version is already valid
-    else {
+    // else {
       output = JSON.parse(
         solc.compile(JSON.stringify(input), { import: findImports }),
       )
-    }
+    // }
 
     let abis = {}
     let byteCodes = {}
@@ -365,16 +367,16 @@ chokidar
     persistent: true,
     cwd: userRealDirectory,
   })
-  .on('all', async (event, path) => {
+  .on('all', async (event, filePath) => {
     if (event === 'change') {
       try {
-        console.log('Watching .sol file: ', event, path)
+        console.log('Watching .sol file: ', event, filePath)
 
         // If changes are made to sol file, redeploy that file
-        let [abis, bytecode] = await compileContract(path)
+        let [abis, bytecode] = await compileContract(path.basename(filePath))
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`Changes found in ${path}, redeployed contract`)
+        console.log(`Changes found in ${filePath}, redeployed contract`)
 
         globalContract = contract
         globalAbis = abis

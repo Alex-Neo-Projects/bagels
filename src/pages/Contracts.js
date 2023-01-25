@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 export default function Contracts({ contractName }) {
   const [balances, setBalances] = useState()
@@ -219,10 +220,10 @@ export default function Contracts({ contractName }) {
                   <p className="text-xl font-medium">ABI:</p>
 
                   <div className="flex flex-col space-y-2">
-                    {abiState &&
+                    {(abiState &&
                       contractNameState &&
-                      abiState[contractNameState]
-                        .sort((a, b) => {
+                      abiState[contractNameState]) ? 
+                        abiState[contractNameState].sort((a, b) => {
                           if (a.stateMutability === 'view') {
                             return -1
                           }
@@ -246,7 +247,9 @@ export default function Contracts({ contractName }) {
                               />
                             </div>
                           )
-                        })}
+                        }) : (
+                          <LoadingSpinner />
+                        )}
                   </div>
                 </div>
               </div>
