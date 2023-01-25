@@ -4,8 +4,11 @@ import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
-import path, { basename, join } from 'path'
-import { getFilepath, getPathDirname } from '../utils.js'
+import path, { parse } from 'path'
+import { getSolcVersionFromContract } from '../utils.js'
+import { execSync } from 'child_process'
+import semver, { valid } from 'semver'; 
+import fetch from 'node-fetch'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -195,9 +198,9 @@ app.post('/test', (req, res) => {
 
 app.listen(PORT)
 
-async function compileSpecificSolVersion(input) {
+async function compileSpecificSolVersion(input, version) {
   return new Promise(async (resolve, reject) => { 
-    await solc.loadRemoteVersion('v0.5.16+commit.9c3226ce', function(err, solcSnapshot) {
+    await solc.loadRemoteVersion(version, function(err, solcSnapshot) {
       if (err) { 
         console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
         reject(err);
@@ -211,15 +214,29 @@ async function compileSpecificSolVersion(input) {
   })
 }
 
+// Simply loop through solidity versions and pick the earliest version that is valid for the solc version specified in the contract
+// Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
+async function pickValidSolcVersion(contractSolcVersion) {
+  // TODO: Probably should just cache this locally instead of making this API call (slow) so often
+  const res = await fetch('https://binaries.soliditylang.org/bin/list.json'); 
+  const parsedRes = await res.json();
+  
+  const validVersion = parsedRes['builds'].find((item) => semver.satisfies(item['longVersion'], contractSolcVersion));
+
+  return 'v' + validVersion['longVersion'];
+}
+
 async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
+
+    const fileAsString = fs.readFileSync(solidityFileDirMappings[file]).toString(); 
 
     let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-           content: fs.readFileSync(solidityFileDirMappings[file]).toString()
+           content: fileAsString
         },
       },
       settings: {
@@ -231,13 +248,24 @@ async function compileContract(file) {
       },
     }
 
-    let output = await compileSpecificSolVersion(input); 
+    // Format looks like: 0.8.17+commit.8df45f5f.Emscripten.clang
+    const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
 
-    console.log('output: ', output); 
-    
-    // let output = JSON.parse(
-    //   solc.compile(JSON.stringify(input), { import: findImports }),
-    // )
+    const contractSolcVersion = getSolcVersionFromContract(fileAsString);
+
+    let output;
+
+    // Invalid solc version installed, need to pick a valid one, install it, and compile the contract w/ that. 
+    if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
+      const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
+      output = await compileSpecificSolVersion(input, validSolcVersion);
+    }
+    // Installed solc version is already valid
+    else {
+      output = JSON.parse(
+        solc.compile(JSON.stringify(input), { import: findImports }),
+      )
+    }
 
     let abis = {}
     let byteCodes = {}
@@ -301,11 +329,6 @@ function findImports(fileName) {
   try {
     // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
     const justTheFileName = path.basename(fileName);
-    console.log(justTheFileName); 
-
-    console.log('finding: ', justTheFileName); 
-
-    console.log('file mappings: ', solidityFileDirMappings); 
 
     let file;
     

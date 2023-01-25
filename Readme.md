@@ -4,8 +4,7 @@
 
 Bagels is a rapid prototyping tool for Solidity. 
 
-With Bagels you can:
-- Deploy your contracts on a local network instantly
+Features:
 - Interact with your contracts via the UI 
 - Instantly see contract changes via the UI
 - Also, this works with your existing testing framework! (Use it w/ hardhat or forge)
