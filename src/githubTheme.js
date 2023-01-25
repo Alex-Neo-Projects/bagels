@@ -5,7 +5,8 @@ export const functionColor=`text-[#AE93EA]`;
 export const titleColor="text-[#4B8DF7]"
 export const modiferColor=`text-[#AE93EA]`;
 
-export const plainTitleStyle = `text-2xl tracking-tighter text-left font-bold`;
+export const plainSubtitleStyle = `text-xl tracking-tighter text-left font-bold`;
+export const plainTitleStyle = `text-3xl tracking-tighter text-left font-bold`;
 export const coloredTitleStyle = `${plainTitleStyle} ${functionColor}`
 
 export const subheading= "text-md";
