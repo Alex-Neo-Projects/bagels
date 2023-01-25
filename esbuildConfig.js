@@ -10,8 +10,6 @@ let context = await esbuild.context({
   loader: { '.js': 'jsx', '.eot': 'file', '.ttf': 'file', '.woff': 'file', '.woff2': 'file' }
 })
 
-console.log('Starting bagel 🥯 \n'); 
-
 await context.watch();
 
 // Serve the esbuild server on a random port (the requests are forwarded from port 9001 --> this)
@@ -54,4 +52,4 @@ const proxy = http.createServer((req, res) => {
 
 proxy.listen(9091);
 
-console.log(`Site on: http://127.0.0.1:9091`);
+console.log(`🥯 Started bagels on: http://127.0.0.1:9091`);

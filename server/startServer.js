@@ -275,9 +275,6 @@ async function compileContract(file) {
         },
       },
     }
-
-    
-    console.time('exec')
     let output;
     
     // Find specific solc version (slow, so commented out for now)
@@ -293,9 +290,6 @@ async function compileContract(file) {
     output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
-
-    console.log('output is: ', output)
-    console.timeEnd('exec')
 
     let abis = {}
     let byteCodes = {}
@@ -342,7 +336,6 @@ async function deployContracts(abis, bytecodes, constructor) {
   deploymentString += ')'
 
   const contract = await eval(deploymentString)
-  console.log('Deployed Contract')
 
   return [factory, contract]
 }
