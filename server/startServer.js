@@ -87,6 +87,7 @@ app.post('/deployContract', async (req, res) => {
 
       // push contract update
       contracts[contractName]['deploymentAddresses'].push(contract.address)
+      contracts[contractName]['transactions'] = []
       // update the currently selected contract
       globalContract = contract
 
@@ -184,6 +185,8 @@ app.post('/executeTransaction', async (req, res) => {
       const functionResult = await eval(callFunctionString)
 
       if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
+        functionResult['functionName'] = functionName
+        functionResult['stateMutability'] = stateMutability
         functionResult['params'] = params
         contracts[contractName]['transactions'].push(functionResult)
       }
@@ -206,7 +209,9 @@ app.post('/transactions', async (req, res) => {
       throw new Error('Contract does not exist, try again')
     }
 
-    return res.status(200).send({ transactions: contracts[contractName]['transactions'] })
+    return res
+      .status(200)
+      .send({ transactions: contracts[contractName]['transactions'] })
   } catch (e) {
     return res.status(500).send({ error: e })
   }
@@ -227,6 +232,14 @@ app.get('/subscribeToChanges', async (req, res) => {
     console.log(`Connection closed`)
     client = null
   })
+})
+
+app.get('/contracts', async (req, res) => {
+  try {
+    return res.status(200).send({ contracts })
+  } catch (e) {
+    return res.status(500).send({ error: e })
+  }
 })
 
 app.listen(PORT)
@@ -413,7 +426,7 @@ chokidar
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path)
-        let { _, contract } = await deployContracts(abis, bytecode, [])
+        let { _, contract } = await deployContracts(abis, bytecode, null)
 
         // Update deployment address field
         contracts[path]['deploymentAddresses'].push(contract.address)

@@ -50,7 +50,7 @@ export default function Home() {
               </p>
 
               {loading && (
-                <div className="flex justify-center items-center">
+                <div className="flex justify-center items-center duration-700">
                   <svg
                     aria-hidden="true"
                     className="w-5 h-5 mr-2 text-transparent animate-spin fill-[#0E76FD]"
@@ -71,17 +71,12 @@ export default function Home() {
               )}
             </div>
 
-            {!loading && solidityFiles.length === 0 && (
+            {!loading && error && solidityFiles.length === 0 && (
               <div className="flex flex-col justify-start items-start pt-3 pb-10">
                 <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
                   Uh oh, we aren't able to find any solidity files in this
                   directory.
                 </p>
-              </div>
-            )}
-
-            {!loading && error && (
-              <div className="flex flex-col justify-start items-start pt-3 pb-10">
                 <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
                   {error.message}
                 </p>

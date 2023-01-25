@@ -11,7 +11,7 @@ export function TextInputs({
   getTransactions,
   deployContract,
   contractName,
-}) {
+}) {  
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
