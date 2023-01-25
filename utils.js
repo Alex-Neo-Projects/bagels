@@ -2,10 +2,6 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-export function getDirname() {
-  return path.resolve()
-}
-
 export function getFilepath(args = []) {
   return path.join(args.join('/'))
 }
@@ -16,4 +12,16 @@ export function getFilename() {
 
 export function getPathDirname() {
   return path.dirname(getFilename())
+}
+
+// ChatGPT generated code 😎
+export function getSolcVersionFromContract(contractCode) {
+  const match = contractCode.match(/pragma solidity (.*);/);
+
+  if (match) {
+    const version = match[1];
+    return version;
+  } else {
+    throw new Error("No solc version found. \n\n Does your contract contain a 'pragma solidity' declaration?")
+  }
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Link } from 'wouter'
 
 export default function Contracts({ contractName }) {
@@ -130,8 +131,6 @@ export default function Contracts({ contractName }) {
 
   async function getABI() {
     try {
-      console.log(`${SERVER_URL}/abi?contractName=${contractName} `)
-
       const abiAndBytecode = await fetch(
         `${SERVER_URL}/abi?contractName=${contractName}`,
         {

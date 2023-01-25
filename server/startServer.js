@@ -4,8 +4,11 @@ import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
-import path from 'path'
-import { getFilepath, getPathDirname } from '../utils.js'
+import path, { parse } from 'path'
+import { getSolcVersionFromContract } from '../utils.js'
+import { execSync } from 'child_process'
+import semver, { valid } from 'semver'; 
+import fetch from 'node-fetch'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -24,7 +27,10 @@ app.use(express.json())
 app.use(cors())
 
 let client
-let globalContract
+let globalContract;
+let node_modulesDirLocation = ''; 
+let libDirLocation = '';
+let solidityFileDirMappings = {};
 let globalAbis = {}
 
 let historicalContracts = []
@@ -34,16 +40,46 @@ app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
+function getSolidityFiles() { 
+  let filesReturned = getAllFiles(userRealDirectory); 
+
+  filesReturned.map((file) => {
+    const basename = path.basename(file);
+    solidityFileDirMappings[[basename]] = file;
+  });  
+}
+
 app.get('/solidityFiles', async (req, res) => {
   try {
-    const files = fs.readdirSync(userRealDirectory)
-    var solidityFiles = files.filter((file) => file.split('.').pop() === 'sol')
+    getSolidityFiles(); 
 
-    return res.status(200).send({ files: solidityFiles })
+    return res.status(200).send({ files: Object.keys(solidityFileDirMappings)})
   } catch (e) {
+    console.log('error: ', e);
     return res.status(500).send({ error: e })
   }
 })
+
+function getAllFiles(dirPath, arrayOfFiles) {
+  let files = fs.readdirSync(dirPath)
+
+  arrayOfFiles = arrayOfFiles || []
+
+  files.forEach(function(file) {
+    // Keep track of node_modules folder location (for use in imports) and return (no need to scan entire node_modules folder)
+    if (file.includes('node_modules')) {node_modulesDirLocation = path.join(dirPath, "/", file); return}
+    // Same as above for lib/ (used in forge);
+    else if (file.includes('lib')) {libDirLocation = path.join(dirPath, "/", file); return}
+    else if (fs.statSync(dirPath + "/" + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles)
+    } else {
+      // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
+      if (file.split('.').pop() === 'sol' && file.split('.').length === 2) arrayOfFiles.push(path.join(dirPath, "/", file))
+    }
+  })
+
+  return arrayOfFiles
+}
 
 app.post('/deployContract', async (req, res) => {
   try {
@@ -190,16 +226,45 @@ app.get('/getHistoricalContracts', async (req, res) => {
 
 app.listen(PORT)
 
+async function compileSpecificSolVersion(input, version) {
+  return new Promise(async (resolve, reject) => { 
+    await solc.loadRemoteVersion(version, function(err, solcSnapshot) {
+      if (err) { 
+        console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
+        reject(err);
+      } else {
+        let output = JSON.parse(
+          solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
+        ) 
+        resolve(output); 
+      }
+    }); 
+  })
+}
+
+// Simply loop through solidity versions and pick the earliest version that is valid for the solc version specified in the contract
+// Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
+async function pickValidSolcVersion(contractSolcVersion) {
+  // TODO: Probably should just cache this locally instead of making this API call (slow) so often
+  const res = await fetch('https://binaries.soliditylang.org/bin/list.json'); 
+  const parsedRes = await res.json();
+  
+  const validVersion = parsedRes['builds'].find((item) => semver.satisfies(item['longVersion'], contractSolcVersion));
+
+  return 'v' + validVersion['longVersion'];
+}
+
 async function compileContract(file) {
   try {
+    if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
+
+    const fileAsString = fs.readFileSync(solidityFileDirMappings[file]).toString(); 
+
     let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-          content: fs.readFileSync(
-            path.resolve(userRealDirectory, file),
-            'utf8',
-          ),
+           content: fileAsString
         },
       },
       settings: {
@@ -211,9 +276,26 @@ async function compileContract(file) {
       },
     }
 
-    let output = JSON.parse(
+    
+    console.time('exec')
+    let output;
+    
+    // Find specific solc version (slow, so commented out for now)
+    // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
+    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang'; 
+
+    // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
+    // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
+    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
+    //   output = await compileSpecificSolVersion(input, validSolcVersion);
+    // }
+
+    output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
+
+    console.log('output is: ', output)
+    console.timeEnd('exec')
 
     let abis = {}
     let byteCodes = {}
@@ -227,13 +309,13 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
+    console.log('e: ', e); 
     throw new Error(
       `Couldn't compile contract ${file} because of error: ${e.message}`,
     )
   }
 }
 
-// NOTE: currently this only deploys 1 contract at a time
 async function deployContracts(abis, bytecodes, constructor) {
   let abi = Object.values(abis)[0]
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
@@ -276,63 +358,26 @@ async function checkEtherBalance(provider, address) {
   }
 }
 
-// Note: There HAS to be a better way to do this. But this is an initial first attempt, so I can figure out what a better solution could look like
-// Finding imports explantion:
-// nodeModulesImportPath == contract and node_modules are in the same directory (flat structure): 
-  // test.sol
-  // node_modules/
-// outsideNodeModulesImportPath == the contract is nested compared to the node modules: 
-  // contracts/
-    // test.sol
-  // node_modules/
-// Man, file systems SUCK.
-function findImports(filePath) {
+function findImports(fileName) {
   try {
-
-    let nodeModulesFlatImportPath = getFilepath([
-      userRealDirectory,
-      'node_modules',
-      filePath,
-    ])
-
-    let nodeModulesNestedImportPath = getFilepath([
-      path.join(userRealDirectory, '..'),
-      'node_modules',
-      filePath,
-    ])
-
-    let forgeFlatLibImportPath = getFilepath([
-      userRealDirectory,
-      'lib',
-      filePath,
-    ])
-
-    let forgeNestedLibImportPath = getFilepath([
-      path.join(userRealDirectory, '..'),
-      'lib',
-      filePath,
-    ])
-
-    let fileInCurrentDir = path.join(userRealDirectory, filePath);
+    // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
+    const justTheFileName = path.basename(fileName);
 
     let file;
     
-    // Import is another contract in the current directory
-    if (fs.existsSync(fileInCurrentDir)) {
-      file = fs.readFileSync(fileInCurrentDir)
+    // Import is another contract somewhere inside the root directory
+    if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
+      file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
     }
     else {
-      let isNodeModulesImportFlat = fs.existsSync(nodeModulesFlatImportPath);
-      let isNodeModulesImportNested = fs.existsSync(nodeModulesNestedImportPath);
+      let nodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
+      let forgePackagePath = path.join(libDirLocation, justTheFileName); 
 
-      let isForgeImportFlat = fs.existsSync(forgeFlatLibImportPath); 
-      let isForgeImportNested = fs.existsSync(forgeNestedLibImportPath); 
-
-      if (isNodeModulesImportFlat) file = fs.readFileSync(nodeModulesFlatImportPath);
-      else if (isNodeModulesImportNested) file = fs.readFileSync(nodeModulesNestedImportPath);
-      else if (isForgeImportFlat) file = fs.readFileSync(forgeFlatLibImportPath);
-      else if (isForgeImportNested) file = fs.readFileSync(forgeNestedLibImportPath);
-      else throw Error(`Couldn't find the import ${filePath}`)
+      if (fs.existsSync(nodePackagePath)) {
+        file = fs.readFileSync(nodePackagePath);
+      } else if (fs.existsSync(forgePackagePath)) { 
+        file = fs.readFileSync(forgePackagePath); 
+      } else throw Error(`Couldn't find the import ${file}`)
     }
 
     return {
@@ -353,16 +398,16 @@ chokidar
     persistent: true,
     cwd: userRealDirectory,
   })
-  .on('all', async (event, path) => {
+  .on('all', async (event, filePath) => {
     if (event === 'change') {
       try {
-        console.log('Watching .sol file: ', event, path)
+        console.log('Watching .sol file: ', event, filePath)
 
         // If changes are made to sol file, redeploy that file
-        let [abis, bytecode] = await compileContract(path)
+        let [abis, bytecode] = await compileContract(path.basename(filePath))
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`Changes found in ${path}, redeployed contract`)
+        console.log(`Changes found in ${filePath}, redeployed contract`)
 
         globalContract = contract
         globalAbis = abis
