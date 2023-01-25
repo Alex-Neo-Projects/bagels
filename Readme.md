@@ -1,6 +1,6 @@
 ![codename bagel](https://github.com/Alex-Neo-Projects/bagels/blob/main/assets/banner.png)
 
-## bagels 🥯
+## bagels 🥯 (alpha)
 
 Bagels is a rapid prototyping tool for Solidity. 
 
@@ -12,31 +12,35 @@ Features:
 **The goal of bagels is to make writing, iterating, and playing with smart contracts as fast as making a site using modern web dev tools.**
 
 #### Installation setup:
+Pick your preferred node package manager:
 ```
 npm i -g bagels 
+```
 or 
+```
 yarn add global bagels 
+```
 or 
+```
 bun -g i bagels
 ```
 
 #### Running bagels: 
-1) run `bagels` in your project root
+1) run `bagels` in your solidity project's root directory
 
 ##### Coming soon:
 - Fund your wallet/contract with various ERC20 tokens starting with USDC (WIP)
 - Fork testnets/mainnet
 
 ### Known limitations
-1) **bagels is not a unit testing framework**, it's just meant to just make the initial process of writing contracts faster and more fun by tightening the feedback loop
-2) If you're going to deploy to mainnet, using a local network is probably not enough and you should still test on a public testnet
+1) **bagels is not a unit testing framework**. Bagels is about making the initial process of writing contracts faster and more fun by tightening the feedback loop.
+2) If you're going to deploy to mainnet, using a local network is probably not enough and you should still test on a public testnet.
 3) We haven't tested this out with all possible combinations of ABIs, so if you run into problems please raise an issue.
-5) bagels currently only works if you `cd` into the folder where you contracts are stored.
 
 #### Running this repo: 
 (we use bun)
 
-1) `Clone this repo`
+1) `git clone https://github.com/Alex-Neo-Projects/bagels`
 2) `cd bagels`
 3) `bun i`
 4) `bun run dev`
