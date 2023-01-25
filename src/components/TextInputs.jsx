@@ -166,8 +166,8 @@ export function TextInputs({
         <button
           className={
             val.inputs.length > 0
-              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]'
-              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]'
+              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
+              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
           }
           onClick={async () => {
             // Clear outputs and errors
