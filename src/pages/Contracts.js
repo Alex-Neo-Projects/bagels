@@ -4,6 +4,7 @@ import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Link } from 'wouter'
+import { titleColor, keywordStyleColoredTitle, coloredTitleStyle, plainTitleStyle, subheading, functionModiferStyle, keywordStyleColored, functionStyleColored, plainSubtitleStyle } from '../githubTheme';
 
 export default function Contracts({ contractName }) {
   const [balances, setBalances] = useState()
@@ -11,6 +12,7 @@ export default function Contracts({ contractName }) {
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
 
+  const [showMoreInfo, setShowMoreInfo] = useState(false); 
   const [transactions, setTransactions] = useState([])
   const [contracts, setContracts] = useState([])
 
@@ -160,9 +162,19 @@ export default function Contracts({ contractName }) {
     let header = ''
     switch (val.type) {
       case 'function':
-        header += `function ${val.name}(${inputsToString(val.inputs)}) ${
-          val.stateMutability
-        }`
+        return (
+          <div>
+            <p className={keywordStyleColored}>
+              function
+            </p>
+            <p className={functionStyleColored}>
+              {val.name}({inputsToString(val.inputs)}) 
+            </p>
+            <p className={functionModiferStyle}>
+              {val.stateMutability}
+            </p>
+          </div>
+        )
         break
       case 'receive':
         header += `function ${val.name}(${inputsToString(val.inputs)}) ${
@@ -205,7 +217,7 @@ export default function Contracts({ contractName }) {
           <Link href="/">
             <button className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]">
               <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
-                <p>Contracts</p>
+                <p>Back</p>
               </div>
             </button>
           </Link>
@@ -232,27 +244,30 @@ export default function Contracts({ contractName }) {
             ) : (
               <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
-                  <h1 className="text-xl tracking-tighter text-left font-bold">
-                    Contract {contractNameState || ''}
+                  <h1 className={`${keywordStyleColoredTitle}`}>
+                    contract
+                  </h1>
+                  <h1 className={plainTitleStyle}>
+                    { contractNameState || ''}
                   </h1>
                 </div>
 
                 <div className="flex flex-col space-y-2">
                   <div className="space-y-1">
-                    <p className="text-xl font-medium">Wallet address</p>
-                    <p className="text-sm">
+                    <p className={plainSubtitleStyle}>Wallet address</p>
+                    <p className={subheading}>
                       0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-col space-y-1">
-                  <p className="text-xl font-medium">Address Balance</p>
-                  <p className="text-md">ETH: {balances?.balances?.eth}</p>
+                  <p className={plainSubtitleStyle}>Token Balance</p>
+                  <p className={subheading}>ETH: {balances?.balances?.eth}</p>
                 </div>
 
-                <div className="flex flex-col">
-                  <p className="text-xl font-medium">ABI</p>
+                <div className="flex flex-col pt-2">
+                  {/* <p className={`${plainTitleStyle} pb-2`}>Read/write to the contract</p> */}
 
                   <div className="flex flex-col space-y-3">
                     {abiState &&
@@ -261,9 +276,7 @@ export default function Contracts({ contractName }) {
                         return (
                           <div key={idx.toString()} className="space-y-2">
                             <div>
-                              <p className="text-md font-bold mt-2">
-                                {renderFunctionHeader(val)}
-                              </p>
+                              {renderFunctionHeader(val)}
                             </div>
 
                             <TextInputs
@@ -292,15 +305,14 @@ export default function Contracts({ contractName }) {
                 {/* Transaction TEMPLATE */}
                 <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
-                    <h1 className="text-xl tracking-tighter text-left font-bold">
+                    <h1 className={plainTitleStyle}>
                       Transactions
                     </h1>
-                    <p className="text-sm font-medium">
-                      Your transactions throughout the development of your
-                      contract.
+                    <p className="text-sm font-medium pt-2">
+                      The transactions below are specific to <i>this</i> contract deployment
                     </p>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col w-full">
                     <div className="flex flex-col space-y-2">
                       {transactions.length > 0 ? (
                         transactions.map((val, idx) => {
@@ -315,32 +327,11 @@ export default function Contracts({ contractName }) {
                                 </p>
                               </div>
 
-                              <div className="flex flex-col space-y-1">
-                                <p className="text-md font-bold">Hash</p>
-                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                  <p className="text-sm">{val.res.hash}</p>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-col space-y-1">
-                                <p className="text-md font-bold">From</p>
-                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                  <p className="text-sm">{val.res.from}</p>
-                                </div>
-                              </div>
-
                               <div className="flex flex-col space-y-4">
-                                <div className="flex flex-col space-y-1">
-                                  <p className="text-md font-bold">Data</p>
-                                  <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                    <p className="test-sm">{val.res.data}</p>
-                                  </div>
-                                </div>
-
                                 <div className="flex flex-col space-y-4">
                                   <div className="flex flex-col space-y-1">
                                     <p className="text-md font-bold">
-                                      Function
+                                      Function:
                                     </p>
                                     <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
                                       <p className='text-sm'>
@@ -352,7 +343,7 @@ export default function Contracts({ contractName }) {
                                   </div>
 
                                   <div className="flex flex-col space-y-2">
-                                    <p className="text-md font-bold">Params</p>
+                                    <p className="text-md font-bold">Params:</p>
 
                                     <div className="space-y-6">
                                       {val.params.map((param, paramsVal) => {
@@ -392,6 +383,52 @@ export default function Contracts({ contractName }) {
                                   </div>
                                 </div>
                               </div>
+
+                              {!showMoreInfo && (
+                                <div className="flex flex-col space-y-1">
+                                  <div onClick={() => setShowMoreInfo(true)} className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]">
+                                    <p className="text-sm">More info</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {showMoreInfo && (
+                                <>
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">Hash</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">{val.res.hash}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">To</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">{val.res.to}</p>
+                                    </div>
+                                  </div> 
+
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">From</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">{val.res.from}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">Raw data</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="test-sm">{val.res.data}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col space-y-1">
+                                    <div onClick={() => setShowMoreInfo(false)} className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]">
+                                      <p className="text-sm">Hide more info</p>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           )
                         })
