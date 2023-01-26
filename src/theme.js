@@ -13,6 +13,7 @@ export const parameterTypeColor=modiferColor;
 export const parameterNameColor=paranthesisColor;
 export const commaColor=`text-[#8A888E]`
 export const buttonBackgroundColor=`bg-[#0E76FD]`
+export const buttonTextColor=`text-[#FFFFF]`
 
 export const plainSubtitleStyle = `text-xl tracking-tighter text-left font-bold`;
 export const plainTitleStyle = `text-3xl tracking-tighter text-left font-bold `;

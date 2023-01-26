@@ -1,7 +1,7 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
 import { SERVER_URL } from '../constants'
-import { buttonBackgroundColor } from '../theme'
+import { buttonBackgroundColor, buttonTextColor } from '../theme'
 import { InputBox } from './InputBox'
 
 export function TextInputs({
@@ -165,8 +165,8 @@ export function TextInputs({
             // If there's an input, show the input and the button on the same line.
             // If there's no input, make the button fill up the full line
             (val.inputs && val.inputs.length > 0) || val.stateMutability === 'payable'
-              ? `text-sm text-white hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
-              : `text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
+              ? `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
+              : `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
           }
           onClick={async () => {
             // Clear outputs and errors
