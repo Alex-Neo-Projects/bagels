@@ -200,10 +200,10 @@ app.get('/subscribeToChanges', async (req, res) => {
 
   client = res
 
-  req.on('close', () => {
-    console.log(`Connection closed`)
-    client = null
-  })
+  // req.on('close', () => {
+  //   console.log(`Connection closed`)
+  //   client = null
+  // })
 })
 
 app.post('/test', (req, res) => {
