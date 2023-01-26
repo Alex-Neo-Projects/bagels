@@ -26,13 +26,18 @@ app.use(cors())
 // client is used to send events to the frontend
 let client = null
 
-// globalContract is the currently selected contract
-let globalContract = null
-
 // stores all the contracts and its state (eg. deployment addresses, transactions, abi)
 /*
   {
     "1.sol": {
+      "contractData": [
+        {
+          abis: [],
+          bytecode: [], 
+          constructor: []
+          contract: []
+        }
+      ],
       "deploymentAddresses": [],
       "transactions": [],
     }
@@ -61,6 +66,7 @@ app.get('/solidityFiles', async (req, res) => {
       // only add the file to "contracts" if it doesn't exist already
       if (!(solidityFile in contracts)) {
         contracts[solidityFile] = {
+          contractData: [],
           deploymentAddresses: [],
           transactions: [],
         }
@@ -73,62 +79,88 @@ app.get('/solidityFiles', async (req, res) => {
   }
 })
 
-// deploy contracts only if this is a first load, or the user manually deploys it, or the contract changes in the directory
-// make updates to globalContract and contracts
+app.post('/abi', async (req, res) => {
+  try {
+    const { contractFilename } = req.body
+    let { abis, byteCodes } = await compileContract(contractFilename)
+    return res.status(200).send({ abi: abis, bytecode: byteCodes })
+  } catch (e) {
+    res.status(500).send({ error: e })
+  }
+})
+
 app.post('/deployContract', async (req, res) => {
   try {
-    const { abi, bytecode, constructor, contractName, isManual } = req.body
+    console.log("\n\n\n\n\nDEPLOY askldfj; sadlkjfCONTRACT CALLED\n\n\n\n");
+
+    const {
+      contractFilename,
+      abi,
+      bytecode,
+      hasConstructor,
+      constructor,
+      redeploy,
+    } = req.body
+
+    let contractData = {
+      abi: abi,
+      bytecode: bytecode,
+      constructor: hasConstructor ? constructor : [],
+      contract: [],
+    }
 
     let isFirstLoad =
-      contracts[contractName]['deploymentAddresses'].length === 0
+      contracts[contractFilename]['deploymentAddresses'].length === 0
+    // if the contract has a constructor, check if constructor args is passed in
 
-    if (isManual || isFirstLoad) {
-      let { _, contract } = await deployContracts(abi, bytecode, constructor)
+    let tempContract = null
+    if (hasConstructor) {
+      console.log('has a constructor\n')
+      if (isFirstLoad) {
+        console.log('is first load \n')
+        let { contract } = await deployContracts(abi, bytecode, constructor)
+        tempContract = contract
 
-      // push contract update
-      contracts[contractName]['deploymentAddresses'].push(contract.address)
-      contracts[contractName]['transactions'] = []
-      // update the currently selected contract
-      globalContract = contract
+        console.log("21 DO YOUR THING: ", typeof contract)
 
-      return res.status(200).send({
-        message: 'Contract Deployed',
-        contract: contracts[contractName],
-      })
+      }
+
+      if (redeploy) {
+        console.log('redeploying \n')
+        contracts[contractFilename]['contractData'].push(contractData)
+
+        refreshFrontend()
+      }
     } else {
-      return res
-        .status(200)
-        .send({ message: 'Contract Found', contract: contracts[contractName] })
+      if (isFirstLoad) {
+        console.log('isFirstLoad \n')
+        let { contract } = await deployContracts(abi, bytecode, null)
+        console.log("21 DO YOUR THING: ", contract)
+        tempContract = contract
+      }
     }
+
+    if (tempContract) {
+      console.log('temp contract... \n')
+      contractData['contract'].push(tempContract)
+      contracts[contractFilename]['contractData'].push(contractData)
+      contracts[contractFilename]['deploymentAddresses'].push(
+        tempContract.address,
+      )
+    }
+
+    return res.status(200).send({ contract: contracts[contractFilename] })
   } catch (e) {
-    console.log('Contract deployment error: ', e)
     return res.status(500).send({ error: e })
   }
 })
 
-app.get('/abi', async (req, res) => {
-  const { contractName } = req.query
-
+app.post('/getContract', async (req, res) => {
   try {
-    let [abis, bytecode] = await compileContract(contractName)
-    return res.status(200).send({ abi: abis, bytecode: bytecode })
+    const { contractFilename } = req.body
+    return res.status(200).send({ contract: contracts[contractFilename] })
   } catch (e) {
     return res.status(500).send({ error: e })
-  }
-})
-
-app.get('/balances', async (req, res) => {
-  try {
-    const ether_balance = await checkEtherBalance(provider, wallet.address)
-
-    let balances = {
-      eth: ether_balance,
-    }
-
-    res.status(200).send(balances)
-  } catch (e) {
-    console.error(e.message)
-    res.status(500).send({ error: e })
   }
 })
 
@@ -152,8 +184,18 @@ app.post('/executeTransaction', async (req, res) => {
       stateMutability === 'nonpayable' ||
       stateMutability === 'payable'
     ) {
+      console.log(
+        typeof contracts[contractName]['contractData'][
+          contracts[contractName]['contractData'].length - 1
+        ]['contract'][0],
+      )
       // Need to just call the function
-      let callFunctionString = 'globalContract.functions.' + functionName + '('
+      let callFunctionString =
+        `contracts[contractName]['contractData'][
+            contracts[contractName]['contractData'].length - 1
+          ]['contract'][0].functions.` +
+        functionName +
+        '('
 
       // param[0] === value
       // param[1] === type
@@ -182,6 +224,8 @@ app.post('/executeTransaction', async (req, res) => {
       }
       callFunctionString += ')'
 
+      console.log("MASHALLAH: ", callFunctionString)
+
       const functionResult = await eval(callFunctionString)
 
       if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
@@ -198,6 +242,21 @@ app.post('/executeTransaction', async (req, res) => {
   } catch (e) {
     console.log(e)
     return res.status(500).send({ error: e })
+  }
+})
+
+app.get('/balances', async (req, res) => {
+  try {
+    const ether_balance = await checkEtherBalance(provider, wallet.address)
+
+    let balances = {
+      eth: ether_balance,
+    }
+
+    res.status(200).send(balances)
+  } catch (e) {
+    console.error(e.message)
+    res.status(500).send({ error: e })
   }
 })
 
@@ -218,6 +277,7 @@ app.post('/transactions', async (req, res) => {
 })
 
 app.get('/subscribeToChanges', async (req, res) => {
+  console.log('\n\n\n FUKKKKKKKK BROOOO SUBBBBBBB')
   const headers = {
     'Content-Type': 'text/event-stream',
     Connection: 'keep-alive',
@@ -228,18 +288,12 @@ app.get('/subscribeToChanges', async (req, res) => {
 
   client = res
 
-  req.on('close', () => {
-    console.log(`Connection closed`)
-    client = null
-  })
-})
+  // req.on('close', () => {
+  //   console.log("\n\n\n FUKKKKKKKK BROOOO CLOSE")
 
-app.get('/contracts', async (req, res) => {
-  try {
-    return res.status(200).send({ contracts })
-  } catch (e) {
-    return res.status(500).send({ error: e })
-  }
+  //   console.log(`Connection closed`)
+  //   client = null
+  // })
 })
 
 app.listen(PORT)
@@ -279,7 +333,7 @@ async function compileContract(file) {
         output.contracts[file][contractName].evm.bytecode.object
     }
 
-    return [abis, byteCodes]
+    return { abis, byteCodes }
   } catch (e) {
     throw new Error(
       `Couldn't compile contract ${file} because of error: ${e.message}`,
@@ -290,6 +344,7 @@ async function compileContract(file) {
 // NOTE: currently this only deploys 1 contract at a time
 async function deployContracts(abis, bytecodes, constructor) {
   try {
+    console.log('\n\n\ndeploy contract called!!!\n\n\n')
     let abi = Object.values(abis)[0]
 
     const factory = new ContractFactory(
@@ -323,7 +378,7 @@ async function deployContracts(abis, bytecodes, constructor) {
 
     const contract = await eval(deploymentString)
 
-    return { factory, contract }
+    return { contract }
   } catch (e) {
     throw new Error(e.message)
   }
@@ -425,13 +480,32 @@ chokidar
         console.log(`Changes found in ${path}, redeploying contract`)
 
         // If changes are made to sol file, redeploy that file
-        let [abis, bytecode] = await compileContract(path)
-        let { _, contract } = await deployContracts(abis, bytecode, null)
+        let { abis, byteCodes } = await compileContract(path)
 
-        // Update deployment address field
-        contracts[path]['deploymentAddresses'].push(contract.address)
-        globalContract = contract
+        let constructor = Object.values(abis)
+          .flat(2)
+          .filter((curr, _) => curr.type === 'constructor')
+        let hasConstructor = constructor.length > 0
 
+        let contractData = {
+          abi: abis,
+          bytecode: byteCodes,
+          constructor: hasConstructor ? constructor : [],
+          contract: [],
+        }
+
+        if (!hasConstructor) {
+          console.log('NO CONSTRUCTOR')
+          let { contract } = await deployContracts(abis, byteCodes, null)
+
+          contractData['contract'].push(contract)
+
+          contracts[path]['contractData'].push(contractData)
+          contracts[path]['deploymentAddresses'].push(contract.address)
+          contracts[path]['transactions'] = []
+        }
+
+        console.log('refreshing')
         refreshFrontend()
       } catch (e) {
         console.log('Error deploying changed contracts: ', e.message)

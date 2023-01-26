@@ -7,11 +7,10 @@ const PORT = 9090
 export function TextInputs({
   val,
   idxOne,
-  getBalance,
-  getTransactions,
+  reloadData,
+  contractFilename,
   deployContract,
-  contractName,
-}) {  
+}) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
@@ -19,14 +18,9 @@ export function TextInputs({
   const [output, setOutput] = useState()
   const [error, setError] = useState()
 
-  // Update fees when a trasaction gets executed
   useEffect(() => {
-    update()
+    reloadData()
   }, [executingTransaction])
-
-  async function update() {
-    Promise.all([getBalance(), getTransactions(contractName)])
-  }
 
   // index[0] === the param value
   // index[1] === the param type
@@ -37,7 +31,6 @@ export function TextInputs({
     setInputs(inputsCopy)
   }
 
-  // TODO: Make this work for a variety of types like addresses,
   function validateInputs() {
     let newError
 
@@ -146,7 +139,7 @@ export function TextInputs({
       key={idxOne.toString()}
     >
       <div className="flex flex-row justify-end w-full items-center space-x-4">
-        {val.inputs.map((param, idx) => {
+        {val['inputs'].map((param, idx) => {
           return (
             <input
               key={idx.toString()}
@@ -187,39 +180,33 @@ export function TextInputs({
             // Execute transaction
             setExecutingTransaction(true)
 
-            let name = val.name
-
             if (val.type === 'constructor') {
-              name = 'constructor'
-              // TODO: FIX THIS FOR CONSTRUCTORS
-              await deployContract(inputs)
-              return
-            }
-
-            const res = await fetch(`${SERVER_URL}/executeTransaction`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                functionName: val.name,
-                params: inputs,
-                stateMutability: val.stateMutability,
-                type: val.type,
-                amount: amount,
-                contractName: contractName,
-              }),
-            })
-
-            const jsonParsed = await res.json()
-
-            if (res.status === 200) {
-              let showOutput = jsonParsed['result']
-                ? `${jsonParsed['result']}`
-                : 'Transaction successful.'
-              setOutput(showOutput)
-            } else if (res.status === 500) {
-              setExecutionError(JSON.stringify(jsonParsed['error']))
+              console.log("TEXT INPUT WE ARE HEREEEEEE!")
+              await deployContract(inputs, false)
+            } else {
+              const res = await fetch(`${SERVER_URL}/executeTransaction`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  functionName: val.name,
+                  params: inputs,
+                  stateMutability: val.stateMutability,
+                  type: val.type,
+                  amount: amount,
+                  contractName: contractFilename,
+                }),
+              })
+              const jsonParsed = await res.json()
+              if (res.status === 200) {
+                let showOutput = jsonParsed['result']
+                  ? `${jsonParsed['result']}`
+                  : 'Transaction successful.'
+                setOutput(showOutput)
+              } else if (res.status === 500) {
+                setExecutionError(JSON.stringify(jsonParsed['error']))
+              }
             }
 
             setTimeout(() => {

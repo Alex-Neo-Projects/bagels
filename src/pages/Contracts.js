@@ -4,29 +4,28 @@ import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
 import { Link } from 'wouter'
 
-export default function Contracts({ contractName }) {
-  const [balances, setBalances] = useState()
-  const [abiState, setAbiState] = useState()
-
-  const [constructorIndex, setConstructorIndex] = useState()
-  const [constructorDeployed, setConstructorDeployed] = useState(false)
-
+export default function Contracts({ contractFilename }) {
   const [contract, setContract] = useState(null)
+  const [contractName, setContractName] = useState('')
+  const [abi, setAbi] = useState(null)
+  const [bytecode, setBytecode] = useState(null)
+  const [constructor, setConstructor] = useState(null)
 
-  const [contractNameState, setContractNameState] = useState()
-  const [bytecodeState, setBytecodeState] = useState()
+  const [balances, setBalances] = useState()
 
   const [loading, setLoading] = useState(false)
-  const [listening, setListening] = useState(false)
-
   const [error, setError] = useState()
+  const [listening, setListening] = useState(false)
+  
 
   useEffect(() => {
     if (!listening) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
+      console.log('\n\n\nOPENING LISTENING\n\n\n')
 
       events.onmessage = (event) => {
         try {
+          clear()
           init()
         } catch (e) {
           console.log(e.message)
@@ -37,40 +36,142 @@ export default function Contracts({ contractName }) {
     }
   }, [listening])
 
-  async function init(isManual = false) {
+  console.log("HELLOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+
+  async function init() {
     try {
       setLoading(true)
 
-      const { returnedAbi, bytecode } = await getABI()
+      console.log("1")
 
-      let constructorIndex = getConstructorAbiIndex(returnedAbi)
+      await getBalance()
 
-      if (constructorIndex !== -1) {
-        // check if a contract has already been deployed
-        const all = await getAllContracts()
-        let deploymentAddressLen =
-          all['contracts'][contractName]['deploymentAddresses'].length
+      console.log("2")
 
-        // if deployed set state for that contract
-        if (deploymentAddressLen > 0) {
-          setContract(all['contracts'][contractName])
-          setLoading(false)
+      const latestContract = await getContract()
+      let contractData = latestContract['contract']['contractData']
+      let contractDataLen = contractData.length 
+      
+        console.log("3")
+
+      const info = await getABI()
+      setContractName(Object.keys(info.abi))
+      setAbi(info.abi)
+      setBytecode(info.bytecode)
+
+      console.log("4")
+
+      let constructor = Object.values(info.abi)
+        .flat(2)
+        .filter((curr, _) => curr.type === 'constructor')
+      let hasConstructor = constructor.length > 0
+
+      console.log("5")
+
+      if(hasConstructor) {
+        console.log("6")
+        // check if the constructor field has any constructors 
+        // check whether the latest constructor has elements in it
+        console.log(contractData[contractDataLen])
+        console.log("lengthhhhh: ",contractDataLen)
+
+        if(contractDataLen === 0) {
+          console.log("7")
+          setConstructor(constructor)
         } else {
-          console.log('NEEDS CONSTRUCTOR STILL')
-          setConstructorIndex(constructorIndex)
-          setLoading(false)
+          console.log("8")
+          setContract(latestContract['contract'])
         }
+
+        console.log("9")
+        setLoading(false)
         return
       }
 
-      // constructor arugument is null at this point
-      // manual deploy is false at this point
-      await deployContract(returnedAbi, bytecode, null, contractName, isManual)
-      await getBalance()
-      
+      console.log("10")
+
+      setContract(latestContract['contract'])
+
+      console.log("11")
+
+      await deployContract(
+        contractFilename,
+        info.abi,
+        info.bytecode,
+        false,
+        null,
+        false,
+      )
+
+
       setLoading(false)
     } catch (e) {
       setError(e)
+    }
+  }
+
+  function clear() {
+    setContract(null)
+    setContractName('')
+    setAbi(null)
+    setBytecode(null)
+    setConstructor(null)
+    setBalances()
+  }
+
+  async function deployContract(
+    contractFilename,
+    abi,
+    bytecode,
+    hasConstructor,
+    constructor,
+    redeploy,
+  ) {
+    const deployment = await fetch(`${SERVER_URL}/deployContract`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contractFilename: contractFilename,
+        abi: abi,
+        bytecode: bytecode,
+        hasConstructor: hasConstructor,
+        constructor: constructor,
+        redeploy: redeploy,
+      }),
+    })
+
+    const deploymentParsed = await deployment.json()
+
+    if (deployment.status === 200) {
+      setContract(deploymentParsed['contract'])
+    } else if (deployment.status !== 200) {
+      console.log(deploymentParsed.error.message)
+    }
+  }
+
+  async function getABI() {
+    try {
+      const res = await fetch(`${SERVER_URL}/abi`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractFilename: contractFilename,
+        }),
+      })
+
+      const resJson = await res.json()
+
+      if (res.status === 200) {
+        return resJson
+      } else {
+        throw new Error('Unable to fetch ABI')
+      }
+    } catch (e) {
+      throw new Error(e.message)
     }
   }
 
@@ -86,6 +187,10 @@ export default function Contracts({ contractName }) {
     }
   }
 
+  async function reloadData() {
+    Promise.all([getBalance(), getTransactions()])
+  }
+
   async function getTransactions(contractName) {
     try {
       const transactions = await fetch(`${SERVER_URL}/transactions`, {
@@ -94,7 +199,7 @@ export default function Contracts({ contractName }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contractName: contractName,
+          contractName: contractFilename,
         }),
       })
 
@@ -111,101 +216,36 @@ export default function Contracts({ contractName }) {
     }
   }
 
-  function getConstructorAbiIndex(abi) {
-    let abiValues = Object.values(abi)[0]
-
-    for (var index = 0; index < abiValues.length; index++) {
-      let currentItem = abiValues[index]
-
-      if (currentItem['type'] === 'constructor') {
-        return index
-      }
-    }
-
-    return -1
-  }
-
-  async function TextInputDeployContract(constructor) {
+  async function textInputDeployContract(constructor, redeploy) {
     try {
       await deployContract(
-        abiState,
-        bytecodeState,
+        contractFilename,
+        abi,
+        bytecode,
+        true,
         constructor,
-        contractName,
-        false,
+        redeploy,
       )
-      setConstructorDeployed(true)
     } catch (e) {
-      console.error(e.message)
       setError(e)
     }
   }
 
-  async function getAllContracts() {
+  async function getContract() {
     try {
-      const contracts = await fetch(`${SERVER_URL}/contracts`, {
-        method: 'GET',
+      const contracts = await fetch(`${SERVER_URL}/getContract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contractFilename: contractFilename,
+        }),
       })
 
       const contractsParsed = await contracts.json()
       return contractsParsed
     } catch (e) {
-      throw new Error(e.message)
-    }
-  }
-
-  async function deployContract(
-    abi,
-    bytecode,
-    constructor,
-    contractName,
-    isManual,
-  ) {
-    const deployment = await fetch(`${SERVER_URL}/deployContract`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        abi: abi,
-        bytecode: bytecode,
-        constructor: constructor,
-        contractName: contractName,
-        isManual: isManual,
-      }),
-    })
-
-    const deploymentParsed = await deployment.json()
-
-    if (deployment.status === 200) {
-      setContract(deploymentParsed['contract'])
-    } else if (deployment.status !== 200) {
-      console.log(deploymentParsed.error.message)
-    }
-  }
-
-  async function getABI() {
-    try {
-      const abiAndBytecode = await fetch(
-        `${SERVER_URL}/abi?contractName=${contractName}`,
-        {
-          method: 'GET',
-        },
-      )
-
-      const jsonifiedAbiAndBytecode = await abiAndBytecode.json()
-      const contractNameFromAbi = Object.keys(jsonifiedAbiAndBytecode['abi'])[0]
-
-      setContractNameState(contractNameFromAbi)
-      setAbiState(jsonifiedAbiAndBytecode['abi'])
-      setBytecodeState(jsonifiedAbiAndBytecode['bytecode'])
-
-      return {
-        returnedAbi: jsonifiedAbiAndBytecode['abi'],
-        bytecode: jsonifiedAbiAndBytecode['bytecode'],
-      }
-    } catch (e) {
-      console.error(e.message)
       throw new Error(e.message)
     }
   }
@@ -252,6 +292,8 @@ export default function Contracts({ contractName }) {
     return param
   }
 
+  console.log("constructor",constructor)
+
   return (
     <Header>
       <div className="px-2">
@@ -265,50 +307,43 @@ export default function Contracts({ contractName }) {
           </Link>
         </div>
       </div>
+
       <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
         <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {loading && !contract && (
               <div className="max-w-lg">
                 <p className="text-md tracking-tighter text-left font-bold">
-                  Loading {contractName}
+                  Loading
                 </p>
               </div>
             )}
 
-            {/* IF THERE'S A CONSTRUCTOR AND IT'S NOT BEEN DEPLOYED */}
-            {!constructorDeployed &&
-              constructorIndex > -1 &&
-              abiState &&
-              contractNameState &&
-              !loading &&
-              !contract && (
-                <div className="flex flex-col justify-start space-y-4">
-                  <div className="flex flex-row justify-between">
-                    <h1 className="text-xl tracking-tighter text-left font-bold">
-                      Contract {contractNameState || ''}
-                    </h1>
-                  </div>
-                  <p className="text-sm font-medium">Enter constructors:</p>
-                  <TextInputs
-                    val={abiState[contractNameState][constructorIndex]}
-                    idxOne={0}
-                    getBalance={getBalance}
-                    deployContract={TextInputDeployContract}
-                    getTransactions={getTransactions}
-                    contractName={contractName}
-                  />
+            {!loading && constructor && !contract && (
+              <div className="flex flex-col justify-start space-y-4">
+                <div className="flex flex-row justify-between">
+                  <h1 className="text-xl tracking-tighter text-left font-bold">
+                    Contract {contractName || ''}
+                  </h1>
                 </div>
-              )}
+                <p className="text-sm font-medium">Enter constructors:</p>
+                <TextInputs
+                  idxOne={0}
+                  contractFilename={contractFilename}
+                  val={constructor[0]}
+                  reloadData={reloadData}
+                  deployContract={textInputDeployContract}
+                />
+              </div>
+            )}
 
-            {/* IF THE CONTRACT HAS BEEN DEPLOYED */}
             {!loading && contract && (
               <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
                   <div className="flex flex-col w-full">
                     <div className="flex flex-row justify-between">
                       <h1 className="text-xl tracking-tighter text-left font-bold">
-                        Contract {contractNameState || ''}
+                        Contract {contractName || ''}
                       </h1>
                     </div>
 
@@ -323,7 +358,15 @@ export default function Contracts({ contractName }) {
                   <button
                     className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]"
                     onClick={async () => {
-                      await init(true)
+                      // await init()
+                      await deployContract(
+                        contractFilename,
+                        abi,
+                        bytecode,
+                        true, // maybe true or false check this out
+                        null,
+                        true,
+                      )
                     }}
                   >
                     <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
@@ -346,14 +389,11 @@ export default function Contracts({ contractName }) {
                 <div className="flex flex-col">
                   <p className="text-xl font-medium">ABI</p>
                   <div className="flex flex-col space-y-3">
-                    {abiState &&
-                      contractNameState &&
-                      abiState[contractNameState].map((val, idx) => {
-                        // don't show a constructor here
+                    {abi &&
+                      abi[contractName].map((val, idx) => {
                         if (val.type === 'constructor') {
                           return
                         }
-
                         return (
                           <div key={idx.toString()} className="space-y-2">
                             <div>
@@ -361,13 +401,13 @@ export default function Contracts({ contractName }) {
                                 {renderFunctionHeader(val)}
                               </p>
                             </div>
+
                             <TextInputs
-                              val={val}
                               idxOne={idx}
-                              getBalance={getBalance}
-                              deployContract={TextInputDeployContract}
-                              getTransactions={getTransactions}
-                              contractName={contractName}
+                              contractFilename={contractFilename}
+                              val={val}
+                              reloadData={reloadData}
+                              deployContract={textInputDeployContract}
                             />
                           </div>
                         )
@@ -379,7 +419,7 @@ export default function Contracts({ contractName }) {
           </div>
         </div>
 
-        <div className="flex flex-col space-y-4">
+        {/* <div className="flex flex-col space-y-4">
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
             <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
@@ -509,7 +549,7 @@ export default function Contracts({ contractName }) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </Header>
   )
