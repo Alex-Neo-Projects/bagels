@@ -29,7 +29,7 @@ export default function Home() {
   const solidityFileChoices = solidityFiles.map((item) => {
     return (
       <a href={`/contracts/${item}`}>
-        <div className={`flex flex-col items-left h-full p-4 bg-[#93939328] hover:${buttonBackgroundColor} rounded-xl text-white`}>
+        <div className={`flex flex-col items-left h-full p-4 bg-[#93939328] hover:bg-[#0E76FD] rounded-xl text-white`}>
           <p className="font-bold">{item}</p>
         </div>
       </a>
@@ -40,7 +40,7 @@ export default function Home() {
     <Header>
       <div className="flex flex-col w-full justify-center items-center space-y-10 overflow-auto">
         <div className="flex w-screen max-w-[35em] px-2">
-          <div className="text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+          <div className={`text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4`}>
             <div className="flex flex-row justify-between items-center max-w-prose">
               <p className="text-2xl tracking-tighter text-left font-bold">
                 Select a contract
