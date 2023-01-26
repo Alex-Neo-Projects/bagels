@@ -6,7 +6,7 @@ import { getFilepath, getPathDirname } from '../utils.js'
 async function main() {
   const serverDir = getFilepath([getPathDirname(), 'server'])
 
-  const nodeProcess = spawn('node', ['startServer.js', process.cwd()], {
+  const nodeProcess = spawn('nodemon', ['startServer.js', process.cwd()], {
     cwd: serverDir,
     stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
   })

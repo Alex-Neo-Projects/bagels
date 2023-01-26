@@ -2,17 +2,28 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
-import { LoadingSpinner } from '../components/LoadingSpinner';
+import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Link } from 'wouter'
-import { titleColor, keywordStyleColoredTitle, coloredTitleStyle, plainTitleStyle, subheading, functionModiferStyle, keywordStyleColored, functionStyleColored, plainSubtitleStyle } from '../githubTheme';
+import {
+  titleColor,
+  keywordStyleColoredTitle,
+  coloredTitleStyle,
+  plainTitleStyle,
+  subheading,
+  functionModiferStyle,
+  keywordStyleColored,
+  functionStyleColored,
+  plainSubtitleStyle,
+} from '../githubTheme'
 
 export default function Contracts({ contractName }) {
   const [balances, setBalances] = useState()
   const [abiState, setAbiState] = useState()
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
+  const [contractAddress, setContractAddress] = useState()
 
-  const [showMoreInfo, setShowMoreInfo] = useState(false); 
+  const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [transactions, setTransactions] = useState([])
   const [contracts, setContracts] = useState([])
 
@@ -38,11 +49,7 @@ export default function Contracts({ contractName }) {
   }, [listening])
 
   async function init() {
-    Promise.all([
-      getBalance(),
-      getHistoricalTransactions(),
-      getHistoricalContracts(),
-    ])
+    Promise.all([getBalance(), getHistoricalTransactions()])
 
     const { returnedAbi, bytecode } = await getABI()
 
@@ -54,6 +61,8 @@ export default function Contracts({ contractName }) {
     }
 
     await deployContract(returnedAbi, bytecode, [])
+
+    await getContractAddress()
   }
 
   async function getBalance() {
@@ -76,18 +85,6 @@ export default function Contracts({ contractName }) {
       )
       const jsonifiedTransactions = await transactions.json()
       setTransactions(jsonifiedTransactions.historicalTransactions)
-    } catch (e) {
-      console.error(e.message)
-    }
-  }
-
-  async function getHistoricalContracts() {
-    try {
-      const contracts = await fetch(`${SERVER_URL}/getHistoricalContracts`, {
-        method: 'GET',
-      })
-      const jsonifiedContracts = await contracts.json()
-      setContracts(jsonifiedContracts.historicalContracts)
     } catch (e) {
       console.error(e.message)
     }
@@ -158,21 +155,29 @@ export default function Contracts({ contractName }) {
     }
   }
 
+  async function getContractAddress() {
+    try {
+      const address = await fetch(`${SERVER_URL}/currentContractAddress`, {
+        method: 'GET',
+      })
+      const addressJson = await address.json()
+      setContractAddress(addressJson['address'])
+    } catch (e) {
+      console.error(e.message)
+    }
+  }
+
   function renderFunctionHeader(val) {
     let header = ''
     switch (val.type) {
       case 'function':
         return (
           <div>
-            <p className={keywordStyleColored}>
-              function
-            </p>
+            <p className={keywordStyleColored}>function</p>
             <p className={functionStyleColored}>
-              {val.name}({inputsToString(val.inputs)}) 
+              {val.name}({inputsToString(val.inputs)})
             </p>
-            <p className={functionModiferStyle}>
-              {val.stateMutability}
-            </p>
+            <p className={functionModiferStyle}>{val.stateMutability}</p>
           </div>
         )
         break
@@ -244,12 +249,8 @@ export default function Contracts({ contractName }) {
             ) : (
               <div className="flex flex-col justify-start space-y-6">
                 <div className="flex justify-start items-center">
-                  <h1 className={`${keywordStyleColoredTitle}`}>
-                    contract
-                  </h1>
-                  <h1 className={plainTitleStyle}>
-                    { contractNameState || ''}
-                  </h1>
+                  <h1 className={`${keywordStyleColoredTitle}`}>contract</h1>
+                  <h1 className={plainTitleStyle}>{contractNameState || ''}</h1>
                 </div>
 
                 <div className="flex flex-col space-y-2">
@@ -275,9 +276,7 @@ export default function Contracts({ contractName }) {
                       abiState[contractNameState].map((val, idx) => {
                         return (
                           <div key={idx.toString()} className="space-y-2">
-                            <div>
-                              {renderFunctionHeader(val)}
-                            </div>
+                            <div>{renderFunctionHeader(val)}</div>
 
                             <TextInputs
                               val={val}
@@ -305,133 +304,154 @@ export default function Contracts({ contractName }) {
                 {/* Transaction TEMPLATE */}
                 <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
-                    <h1 className={plainTitleStyle}>
-                      Transactions
-                    </h1>
+                    <h1 className={plainTitleStyle}>Transactions</h1>
                     <p className="text-sm font-medium pt-2">
-                      The transactions below are specific to <i>this</i> contract deployment
+                      The transactions below are specific to <i>this</i>{' '}
+                      contract deployment
                     </p>
                   </div>
                   <div className="flex flex-col w-full">
                     <div className="flex flex-col space-y-2">
                       {transactions.length > 0 ? (
-                        transactions.map((val, idx) => {
-                          return (
-                            <div
-                              key={idx.toString()}
-                              className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
-                            >
-                              <div>
-                                <p className="text-lg font-extrabold">
-                                  Nonce #{val.res.nonce}
-                                </p>
-                              </div>
+                        transactions
+                          .filter((transaction, _) => {
+                            return transaction.res.to === contractAddress
+                          })
+                          .map((val, idx) => {
+                            return (
+                              <div
+                                key={idx.toString()}
+                                className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
+                              >
+                                <div>
+                                  <p className="text-lg font-extrabold">
+                                    Transaction #{idx.toString()}
+                                  </p>
+                                </div>
 
-                              <div className="flex flex-col space-y-4">
                                 <div className="flex flex-col space-y-4">
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">
-                                      Function:
-                                    </p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className='text-sm'>
-                                        {val.functionName}(
-                                        {val.params.length > 0 ? '' : ' '}){' '}
-                                        {val.stateMutability}
+                                  <div className="flex flex-col space-y-4">
+                                    <div className="flex flex-col space-y-1">
+                                      <p className="text-md font-bold">
+                                        Function:
                                       </p>
+                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                        <p className="text-sm">
+                                          {val.functionName}(
+                                          {val.params.length > 0 ? '' : ' '}){' '}
+                                          {val.stateMutability}
+                                        </p>
+                                      </div>
                                     </div>
-                                  </div>
 
-                                  <div className="flex flex-col space-y-2">
-                                    <p className="text-md font-bold">Params:</p>
+                                    <div className="flex flex-col space-y-2">
+                                      <p className="text-md font-bold">
+                                        Params:
+                                      </p>
 
-                                    <div className="space-y-6">
-                                      {val.params.map((param, paramsVal) => {
-                                        return (
-                                          <div className="pl-2 space-y-2">
-                                            <div className="flex flex-row space-x-4 justify-center items-center">
-                                              <div className="w-10">
-                                                <p className="text-sm font-bold">
-                                                  Value
-                                                </p>
+                                      <div className="space-y-6">
+                                        {val.params.map((param, paramsVal) => {
+                                          return (
+                                            <div className="pl-2 space-y-2">
+                                              <div className="flex flex-row space-x-4 justify-center items-center">
+                                                <div className="w-10">
+                                                  <p className="text-sm font-bold">
+                                                    Value
+                                                  </p>
+                                                </div>
+
+                                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                  <p className="text-sm font-bold">
+                                                    {param[0]}
+                                                  </p>
+                                                </div>
                                               </div>
 
-                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
-                                                <p className="text-sm font-bold">
-                                                  {param[0]}
-                                                </p>
+                                              <div className="flex flex-row space-x-4 justify-center items-center">
+                                                <div className="w-10 ">
+                                                  <p className="text-sm font-bold">
+                                                    Type
+                                                  </p>
+                                                </div>
+
+                                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
+                                                  <p className="text-sm font-bold">
+                                                    {param[1]}
+                                                  </p>
+                                                </div>
                                               </div>
                                             </div>
-
-                                            <div className="flex flex-row space-x-4 justify-center items-center">
-                                              <div className="w-10 ">
-                                                <p className="text-sm font-bold">
-                                                  Type
-                                                </p>
-                                              </div>
-
-                                              <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
-                                                <p className="text-sm font-bold">
-                                                  {param[1]}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )
-                                      })}
+                                          )
+                                        })}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
+
+                                {!showMoreInfo && (
+                                  <div className="flex flex-col space-y-1">
+                                    <div
+                                      onClick={() => setShowMoreInfo(true)}
+                                      className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
+                                    >
+                                      <p className="text-sm">More info</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {showMoreInfo && (
+                                  <>
+                                    <div className="flex flex-col space-y-1">
+                                      <p className="text-md font-bold">Hash</p>
+                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                        <p className="text-sm">
+                                          {val.res.hash}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col space-y-1">
+                                      <p className="text-md font-bold">To</p>
+                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                        <p className="text-sm">{val.res.to}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col space-y-1">
+                                      <p className="text-md font-bold">From</p>
+                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                        <p className="text-sm">
+                                          {val.res.from}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col space-y-1">
+                                      <p className="text-md font-bold">
+                                        Raw data
+                                      </p>
+                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                        <p className="test-sm">
+                                          {val.res.data}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex flex-col space-y-1">
+                                      <div
+                                        onClick={() => setShowMoreInfo(false)}
+                                        className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
+                                      >
+                                        <p className="text-sm">
+                                          Hide more info
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
                               </div>
-
-                              {!showMoreInfo && (
-                                <div className="flex flex-col space-y-1">
-                                  <div onClick={() => setShowMoreInfo(true)} className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]">
-                                    <p className="text-sm">More info</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {showMoreInfo && (
-                                <>
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">Hash</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">{val.res.hash}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">To</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">{val.res.to}</p>
-                                    </div>
-                                  </div> 
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">From</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">{val.res.from}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">Raw data</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="test-sm">{val.res.data}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <div onClick={() => setShowMoreInfo(false)} className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]">
-                                      <p className="text-sm">Hide more info</p>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )
-                        })
+                            )
+                          })
                       ) : (
                         <div className="pt-4">
                           <p>No Transactions Found</p>

@@ -7,7 +7,7 @@ import chokidar from 'chokidar'
 import path, { parse } from 'path'
 import { getSolcVersionFromContract } from '../utils.js'
 import { execSync } from 'child_process'
-import semver, { valid } from 'semver'; 
+import semver, { valid } from 'semver'
 import fetch from 'node-fetch'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -27,35 +27,34 @@ app.use(express.json())
 app.use(cors())
 
 let client
-let globalContract;
-let node_modulesDirLocation = ''; 
-let libDirLocation = '';
-let solidityFileDirMappings = {};
+let globalContract
+let node_modulesDirLocation = ''
+let libDirLocation = ''
+let solidityFileDirMappings = {}
 let globalAbis = {}
 
-let historicalContracts = []
 let historicalTransactions = []
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
-function getSolidityFiles() { 
-  let filesReturned = getAllFiles(userRealDirectory); 
+function getSolidityFiles() {
+  let filesReturned = getAllFiles(userRealDirectory)
 
   filesReturned.map((file) => {
-    const basename = path.basename(file);
-    solidityFileDirMappings[[basename]] = file;
-  });  
+    const basename = path.basename(file)
+    solidityFileDirMappings[[basename]] = file
+  })
 }
 
 app.get('/solidityFiles', async (req, res) => {
   try {
-    getSolidityFiles(); 
+    getSolidityFiles()
 
-    return res.status(200).send({ files: Object.keys(solidityFileDirMappings)})
+    return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
-    console.log('error: ', e);
+    console.log('error: ', e)
     return res.status(500).send({ error: e })
   }
 })
@@ -65,16 +64,22 @@ function getAllFiles(dirPath, arrayOfFiles) {
 
   arrayOfFiles = arrayOfFiles || []
 
-  files.forEach(function(file) {
+  files.forEach(function (file) {
     // Keep track of node_modules folder location (for use in imports) and return (no need to scan entire node_modules folder)
-    if (file.includes('node_modules')) {node_modulesDirLocation = path.join(dirPath, "/", file); return}
+    if (file.includes('node_modules')) {
+      node_modulesDirLocation = path.join(dirPath, '/', file)
+      return
+    }
     // Same as above for lib/ (used in forge);
-    else if (file.includes('lib')) {libDirLocation = path.join(dirPath, "/", file); return}
-    else if (fs.statSync(dirPath + "/" + file).isDirectory()) {
-      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles)
+    else if (file.includes('lib')) {
+      libDirLocation = path.join(dirPath, '/', file)
+      return
+    } else if (fs.statSync(dirPath + '/' + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + '/' + file, arrayOfFiles)
     } else {
       // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
-      if (file.split('.').pop() === 'sol' && file.split('.').length === 2) arrayOfFiles.push(path.join(dirPath, "/", file))
+      if (file.split('.').pop() === 'sol' && file.split('.').length === 2)
+        arrayOfFiles.push(path.join(dirPath, '/', file))
     }
   })
 
@@ -88,7 +93,6 @@ app.post('/deployContract', async (req, res) => {
     let [factory, contract] = await deployContracts(abi, bytecode, constructor)
 
     globalContract = contract
-    historicalContracts.unshift(contract)
 
     return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
@@ -161,11 +165,11 @@ app.post('/executeTransaction', async (req, res) => {
           params.length === 0 ? '' : ','
         }{value: ethers.utils.parseEther("${amount}")}`
       }
+
       callFunctionString += ')'
 
       const functionResult = await eval(callFunctionString)
 
-      console.log('here is the tx: ', historicalTransactions)
       if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
         historicalTransactions.unshift({
           res: functionResult,
@@ -217,9 +221,9 @@ app.get('/getHistoricalTransactions', async (req, res) => {
   }
 })
 
-app.get('/getHistoricalContracts', async (req, res) => {
+app.get('/currentContractAddress', (req, res) => {
   try {
-    return res.status(200).send({ historicalContracts: historicalContracts })
+    return res.status(200).send({ address: globalContract['address'] })
   } catch (e) {
     return res.status(500).send({ error: e })
   }
@@ -228,18 +232,18 @@ app.get('/getHistoricalContracts', async (req, res) => {
 app.listen(PORT)
 
 async function compileSpecificSolVersion(input, version) {
-  return new Promise(async (resolve, reject) => { 
-    await solc.loadRemoteVersion(version, function(err, solcSnapshot) {
-      if (err) { 
+  return new Promise(async (resolve, reject) => {
+    await solc.loadRemoteVersion(version, function (err, solcSnapshot) {
+      if (err) {
         console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
-        reject(err);
+        reject(err)
       } else {
         let output = JSON.parse(
           solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
-        ) 
-        resolve(output); 
+        )
+        resolve(output)
       }
-    }); 
+    })
   })
 }
 
@@ -247,25 +251,29 @@ async function compileSpecificSolVersion(input, version) {
 // Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
 async function pickValidSolcVersion(contractSolcVersion) {
   // TODO: Probably should just cache this locally instead of making this API call (slow) so often
-  const res = await fetch('https://binaries.soliditylang.org/bin/list.json'); 
-  const parsedRes = await res.json();
-  
-  const validVersion = parsedRes['builds'].find((item) => semver.satisfies(item['longVersion'], contractSolcVersion));
+  const res = await fetch('https://binaries.soliditylang.org/bin/list.json')
+  const parsedRes = await res.json()
 
-  return 'v' + validVersion['longVersion'];
+  const validVersion = parsedRes['builds'].find((item) =>
+    semver.satisfies(item['longVersion'], contractSolcVersion),
+  )
+
+  return 'v' + validVersion['longVersion']
 }
 
 async function compileContract(file) {
   try {
-    if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles();
+    if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles()
 
-    const fileAsString = fs.readFileSync(solidityFileDirMappings[file]).toString(); 
+    const fileAsString = fs
+      .readFileSync(solidityFileDirMappings[file])
+      .toString()
 
     let input = {
       language: 'Solidity',
       sources: {
         [file]: {
-           content: fileAsString
+          content: fileAsString,
         },
       },
       settings: {
@@ -276,15 +284,15 @@ async function compileContract(file) {
         },
       },
     }
-    let output;
-    
+    let output
+
     // Find specific solc version (slow, so commented out for now)
     // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
-    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang'; 
+    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang';
 
     // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
     // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
-    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion); 
+    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion);
     //   output = await compileSpecificSolVersion(input, validSolcVersion);
     // }
 
@@ -304,7 +312,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    console.log('e: ', e); 
+    console.log('e: ', e)
     throw new Error(
       `Couldn't compile contract ${file} because of error: ${e.message}`,
     )
@@ -355,22 +363,21 @@ async function checkEtherBalance(provider, address) {
 function findImports(fileName) {
   try {
     // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
-    const justTheFileName = path.basename(fileName);
+    const justTheFileName = path.basename(fileName)
 
-    let file;
-    
+    let file
+
     // Import is another contract somewhere inside the root directory
     if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
       file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
-    }
-    else {
+    } else {
       let nodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
-      let forgePackagePath = path.join(libDirLocation, justTheFileName); 
+      let forgePackagePath = path.join(libDirLocation, justTheFileName)
 
       if (fs.existsSync(nodePackagePath)) {
-        file = fs.readFileSync(nodePackagePath);
-      } else if (fs.existsSync(forgePackagePath)) { 
-        file = fs.readFileSync(forgePackagePath); 
+        file = fs.readFileSync(nodePackagePath)
+      } else if (fs.existsSync(forgePackagePath)) {
+        file = fs.readFileSync(forgePackagePath)
       } else throw Error(`Couldn't find the import ${file}`)
     }
 
