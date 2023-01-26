@@ -325,7 +325,7 @@ export default function Contracts({ contractName }) {
                               >
                                 <div>
                                   <p className="text-lg font-extrabold">
-                                    Transaction #{idx.toString()}
+                                    Transaction #{(transactions.length - idx).toString()}
                                   </p>
                                 </div>
 
