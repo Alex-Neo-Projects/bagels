@@ -35,6 +35,8 @@ export default function Contracts({ contractName }) {
 
   const [error, setError] = useState(null)
 
+  const filteredTransactions = transactions.filter((transaction, _) => {return transaction.res.to === contractAddress})
+
   useEffect(() => {
     if (!listening) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
@@ -268,18 +270,8 @@ export default function Contracts({ contractName }) {
 
   return (
     <Header>
-      <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
-        <div className="px-2">
-          <Link href="/">
-            <button className={`text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:${buttonBackgroundColor}`}>
-              <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
-                <p>Back</p>
-              </div>
-            </button>
-          </Link>
-        </div>
-
-        <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
+      <div className="md:space-x-2 space-y-4 md:space-y-0 flex md:flex-row flex-col">
+        <div className="flex lg:w-1/2">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {error && (
               <div className="justify-start items-start pt-1 w-full">
@@ -335,8 +327,6 @@ export default function Contracts({ contractName }) {
                     </div>
 
                     <div className="flex flex-col pt-2">
-                      {/* <p className={`${plainTitleStyle} pb-2`}>Read/write to the contract</p> */}
-
                       <div className="flex flex-col space-y-3">
                         {abiState &&
                           contractNameState &&
@@ -366,37 +356,28 @@ export default function Contracts({ contractName }) {
           </div>
         </div>
 
-        <div className="flex flex-col space-y-4">
-          <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-            <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
-              <div className="flex flex-col justify-start space-y-4">
-                {/* Transaction TEMPLATE */}
-                <div className="flex flex-col justify-start items-start space-y-4">
-                  <div className="flex flex-col">
-                    <h1 className={plainTitleStyle}>Transactions</h1>
-                    <p className="text-sm font-medium pt-2">
-                      The transactions below are specific to <i>this</i>{' '}
-                      contract deployment
-                    </p>
-                  </div>
-                  <div className="flex flex-col w-full">
-                    <div className="flex flex-col space-y-2">
-                      {transactions.length > 0 ? (
-                        transactions
-                          .filter((transaction, _) => {
-                            return transaction.res.to === contractAddress
-                          })
-                          .map((val, idx) => {
-                            return (
-                              <Transaction val={val} idx={idx} />
-                            )
-                          })
-                      ) : (
-                        <div className="pt-4">
-                          <p>No Transactions Found</p>
-                        </div>
-                      )}
-                    </div>
+        <div className="flex lg:w-1/2 ">
+          <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            <div className="flex flex-col justify-start space-y-4">
+              <div className="flex flex-col justify-start items-start space-y-4">
+                <div className="flex flex-col">
+                  <h1 className={plainTitleStyle}>Transactions in this contract</h1>
+                </div>
+                <div className="flex flex-col w-full">
+                  <div className="flex flex-col space-y-2">
+                    {console.log('transactions length: ', transactions.length)}
+                    {filteredTransactions.length > 0 ? (
+                      filteredTransactions
+                        .map((val, idx) => {
+                          return (
+                            <Transaction val={val} idx={idx} />
+                          )
+                        })
+                    ) : (
+                      <div className="pt-4">
+                        <p className='text-md font-extrabold'>No Transactions to show yet</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
