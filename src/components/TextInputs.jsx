@@ -240,8 +240,7 @@ export function TextInputs({
 
       {output && (
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
-          <p className="text-md font-bold">Output</p>
-          <div className="flex w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
+          <div className="flex w-full bg-[#dbdbdb28] border rounded-lg p-2 text-sm">
             <p className="text-sm">{output}</p>
           </div>
         </div>
