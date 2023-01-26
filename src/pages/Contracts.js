@@ -12,7 +12,7 @@ export default function Contracts({ contractName }) {
   const [constructorIndex, setConstructorIndex] = useState()
   const [constructorDeployed, setConstructorDeployed] = useState(false)
 
-  const [showMoreInfo, setShowMoreInfo] = useState(true); 
+  const [showMoreInfo, setShowMoreInfo] = useState(false); 
   const [transactions, setTransactions] = useState([])
   const [contracts, setContracts] = useState([])
 
@@ -247,7 +247,7 @@ export default function Contracts({ contractName }) {
                   <h1 className={`${keywordStyleColoredTitle}`}>
                     contract
                   </h1>
-                  <h1 className={coloredTitleStyle}>
+                  <h1 className={plainTitleStyle}>
                     { contractNameState || ''}
                   </h1>
                 </div>
