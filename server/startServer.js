@@ -55,7 +55,7 @@ app.get('/solidityFiles', async (req, res) => {
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
     console.log('error: ', e)
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -97,7 +97,7 @@ app.post('/deployContract', async (req, res) => {
     return res.status(200).send({ message: 'Contract Deployed' })
   } catch (e) {
     console.log('Contract deployment error: ', e)
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -109,7 +109,7 @@ app.get('/abi', async (req, res) => {
     globalAbis = abis
     return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
   } catch (e) {
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -124,7 +124,7 @@ app.get('/balances', async (req, res) => {
     res.status(200).send(balances)
   } catch (e) {
     console.error(e.message)
-    res.status(500).send({ error: e })
+    res.status(500).send({ error: e.message })
   }
 })
 
@@ -185,7 +185,7 @@ app.post('/executeTransaction', async (req, res) => {
     }
   } catch (e) {
     console.log(e)
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -217,7 +217,7 @@ app.get('/getHistoricalTransactions', async (req, res) => {
       .status(200)
       .send({ historicalTransactions: historicalTransactions })
   } catch (e) {
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -225,7 +225,7 @@ app.get('/currentContractAddress', (req, res) => {
   try {
     return res.status(200).send({ address: globalContract['address'] })
   } catch (e) {
-    return res.status(500).send({ error: e })
+    return res.status(500).send({ error: e.message })
   }
 })
 
@@ -300,6 +300,16 @@ async function compileContract(file) {
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
 
+    // check if any errors with severity 'error' exists
+    let errors = output.errors
+
+    if (errors) {
+      let err = errors.filter((error, _) => error.severity === 'error')
+      if (err.length > 0) {
+        throw new Error(JSON.stringify({ errors: err }))
+      }
+    }
+
     let abis = {}
     let byteCodes = {}
 
@@ -312,10 +322,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    console.log('e: ', e)
-    throw new Error(
-      `Couldn't compile contract ${file} because of error: ${e.message}`,
-    )
+    throw new Error(e.message)
   }
 }
 
@@ -394,6 +401,10 @@ function refreshFrontend() {
   client.write('data: {"msg": "redeployed"}\n\n')
 }
 
+function sendErrorToFrontend(errorMessage) {
+  client.write(`data: {"error": "${errorMessage}"}\n\n`)
+}
+
 chokidar
   .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
@@ -415,7 +426,8 @@ chokidar
 
         refreshFrontend()
       } catch (e) {
-        console.log('Error deploying changed contracts: ', e.message)
+        // send error to frontend
+        sendErrorToFrontend(e.message)
       }
     }
   })
