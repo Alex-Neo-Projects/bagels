@@ -1,4 +1,4 @@
 node_modules/
 public/build
 yarn.lock
-test_contracts/
+testContracts/

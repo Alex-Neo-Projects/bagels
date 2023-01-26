@@ -1,8 +1,8 @@
 import React from 'react'
 import { useEffect, useState } from 'react'
 import { SERVER_URL } from '../constants'
-
-const PORT = 9090
+import { buttonBackgroundColor, buttonTextColor } from '../theme'
+import { InputBox } from './InputBox'
 
 export function TextInputs({
   val,
@@ -21,7 +21,6 @@ export function TextInputs({
   // Update fees when a trasaction gets executed
   useEffect(() => {
     getBalance()
-    console.log('executing tx')
   }, [])
 
   // index[0] === the param value
@@ -138,36 +137,36 @@ export function TextInputs({
 
   return (
     <div
-      className="flex flex-col justify-between items-start space-y-1 h-full p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl"
+      className="flex flex-col justify-between items-start space-y-1 h-full "
       key={idxOne.toString()}
     >
-      <div className="flex flex-row justify-end w-full items-center space-x-4">
-        {val.inputs.map((param, idx) => {
+      <div className="flex justify-end w-full items-center space-x-4">
+        {/* Check for val.inputs since certain types don't have an inputs field: i.e., fallback(), receive()  */}
+        {val.inputs && val.inputs.map((param, idx) => {
           return (
-            <input
-              key={idx.toString()}
-              className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#93939328] outline-none text-sm"
-              type={'text'}
-              placeholder={`${param.name} (${param.type})`}
-              onChange={handleInputListChange.bind(this, [idx, param.type])}
+            <InputBox 
+              inputType={'text'}
+              inputPlaceholder={`${param.name} (${param.type})`}
+              onInputFunction={handleInputListChange.bind(this, [idx, param.type])} 
             />
           )
         })}
 
         {val.stateMutability === 'payable' && (
-          <input
-            className="appearance-none h-4 w-full m-0 p-4 pt-6 pb-6 rounded-lg bg-[#93939328] outline-none text-sm"
-            type={'text'}
-            placeholder={'Enter an amount'}
-            onInput={(e) => setAmount(parseFloat(e.target.value))}
+          <InputBox 
+            inputType={'text'} 
+            inputPlaceholder={'Enter amount'} 
+            onInputFunction={(e) => setAmount(parseFloat(e.target.value))}
           />
         )}
 
         <button
           className={
-            val.inputs.length > 0
-              ? 'text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
-              : 'text-sm text-white hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg bg-[#0E76FD]'
+            // If there's an input, show the input and the button on the same line.
+            // If there's no input, make the button fill up the full line
+            (val.inputs && val.inputs.length > 0) || val.stateMutability === 'payable'
+              ? `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
+              : `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
           }
           onClick={async () => {
             // Clear outputs and errors
@@ -224,7 +223,7 @@ export function TextInputs({
           }}
           disabled={executingTransaction}
         >
-          <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
+          <div className="flex flex-row justify-center w-full items-center text-md font-bold">
             {executingTransaction ? (
               <div className="flex flex-row justify-center items-center">
                 <p>Loading...</p>
