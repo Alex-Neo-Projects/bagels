@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { SERVER_URL } from '../constants.js'
+import { buttonBackgroundColor } from '../theme'
 
 export default function Home() {
   const [solidityFiles, setSolidityFiles] = useState([])
@@ -28,7 +29,7 @@ export default function Home() {
   const solidityFileChoices = solidityFiles.map((item) => {
     return (
       <a href={`/contracts/${item}`}>
-        <div className="flex flex-col items-left h-full p-4 bg-[#93939328] hover:bg-[#0E76FD] rounded-xl text-white ">
+        <div className={`flex flex-col items-left h-full p-4 bg-[#93939328] hover:${buttonBackgroundColor} rounded-xl text-white`}>
           <p className="font-bold">{item}</p>
         </div>
       </a>

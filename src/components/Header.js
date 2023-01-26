@@ -1,4 +1,4 @@
-import { headerColor, siteBackgroundColor } from '../githubTheme'
+import { headerColor, siteBackgroundColor } from '../theme'
 import '../styles/globals.css'
 
 export default function Header(props) {
