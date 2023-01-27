@@ -417,13 +417,13 @@ chokidar
   .on('all', async (event, filePath) => {
     if (event === 'change') {
       try {
-        console.log('Detected update for: ', filePath)
+        // console.log('Detected update for: ', filePath)
 
         // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path.basename(filePath))
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`Redepoloyed contract ${filePath}\n`);
+        console.log(`\nRedepoloyed contract ${filePath}\n`);
 
         globalContract = contract
         globalAbis = abis
