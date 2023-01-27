@@ -1,7 +1,7 @@
 import { buttonBackgroundColor } from "../theme"
 import { useState } from "react"
 
-export function Transaction({val, idx}) {
+export function Transaction({val, idx, filteredTransactionsLength}) {
   const [showMoreInfo, setShowMoreInfo] = useState(false)
 
   return (
@@ -11,7 +11,7 @@ export function Transaction({val, idx}) {
     >
       <div>
         <p className="text-lg font-extrabold">
-          Transaction #{idx.toString()}
+          Transaction #{filteredTransactionsLength - idx}
         </p>
       </div>
 

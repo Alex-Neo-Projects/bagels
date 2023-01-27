@@ -186,7 +186,6 @@ export function TextInputs({
 
             if (val.type === 'constructor') {
               name = 'constructor'
-              console.log('WHAT IS BEING PASSED IN? ', inputs)
               await deployContract(inputs)
               return
             }
