@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
-import { Link } from 'wouter'
 import {
   keywordStyleColoredTitle,
   plainTitleStyle,
@@ -33,6 +32,8 @@ export default function Contracts({ contractName }) {
 
   const [listening, setListening] = useState(false)
 
+  const [forceTextInputReset, setNewForceTextInputResetVal] = useState(0);
+
   const [error, setError] = useState(null)
 
   const filteredTransactions = transactions.filter((transaction, _) => {return transaction.res.to === contractAddress})
@@ -47,6 +48,9 @@ export default function Contracts({ contractName }) {
 
           if (message.msg === 'redeployed') {
             await init()
+
+            // Want to rerender the inputs (and hide the outputs) whenever a contract change is detected
+            setNewForceTextInputResetVal(Math.random());
           } else if (message.error === 'error') {
             throw new Error(message.error)
           }
@@ -330,12 +334,14 @@ export default function Contracts({ contractName }) {
                       <div className="flex flex-col space-y-3">
                         {abiState &&
                           contractNameState &&
-                          abiState[contractNameState].map((val, idx) => {
+                          [...abiState[contractNameState]].reverse().map((val, idx) => {
+                            // ^^ Need to reverse the ABI order so it looks like the contract
                             return (
                               <div key={idx.toString()} className="space-y-2">
                                 <div>{renderFunctionHeader(val)}</div>
 
                                 <TextInputs
+                                  key={forceTextInputReset}
                                   val={val}
                                   idxOne={idx}
                                   getBalance={getBalance}
