@@ -5,8 +5,6 @@ import { Link, useLocation } from 'wouter'
 export default function Header(props) {
   const [location, setLocation] = useLocation();
 
-  console.log(location); 
-
   return (
     <div className={`flex flex-col min-h-screen w-screen justify-start items-center ${siteBackgroundColor} font-['Supreme-Regular']`}>
       <div className={`flex items-center fixed ${headerColor} border-[#333333] h-14 top-0 left-0 right-0`}>
