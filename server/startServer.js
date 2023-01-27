@@ -27,87 +27,93 @@ app.use(express.json())
 app.use(cors())
 
 let client
-let globalContract
 let node_modulesDirLocation = ''
 let libDirLocation = ''
 let solidityFileDirMappings = {}
-let globalAbis = {}
 
-let historicalTransactions = []
+/*
+  contracts: {
+    'name.sol': {
+      currentVersion: {
+        abis: {}, 
+        transactions: [], 
+        contract: {}
+    }, 
+      historicalChanges: [
+        {...curentVersion}
+      ]
+    }
+  }
+*/
+let contracts = {}
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
 
-function getSolidityFiles() {
-  let filesReturned = getAllFiles(userRealDirectory)
-
-  filesReturned.map((file) => {
-    const basename = path.basename(file)
-    solidityFileDirMappings[[basename]] = file
-  })
-}
-
 app.get('/solidityFiles', async (req, res) => {
   try {
     getSolidityFiles()
-
+    console.log(contracts)
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
-    console.log('error: ', e)
     return res.status(500).send({ error: e.message })
   }
 })
 
-function getAllFiles(dirPath, arrayOfFiles) {
-  let files = fs.readdirSync(dirPath)
-
-  arrayOfFiles = arrayOfFiles || []
-
-  files.forEach(function (file) {
-    // Keep track of node_modules folder location (for use in imports) and return (no need to scan entire node_modules folder)
-    if (file.includes('node_modules')) {
-      node_modulesDirLocation = path.join(dirPath, '/', file)
-      return
-    }
-    // Same as above for lib/ (used in forge);
-    else if (file.includes('lib')) {
-      libDirLocation = path.join(dirPath, '/', file)
-      return
-    } else if (fs.statSync(dirPath + '/' + file).isDirectory()) {
-      arrayOfFiles = getAllFiles(dirPath + '/' + file, arrayOfFiles)
-    } else {
-      // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
-      if (file.split('.').pop() === 'sol' && file.split('.').length === 2)
-        arrayOfFiles.push(path.join(dirPath, '/', file))
-    }
-  })
-
-  return arrayOfFiles
-}
-
 app.post('/deployContract', async (req, res) => {
   try {
-    const { abi, bytecode, constructor } = req.body
+    const { contractFilename, constructor } = req.body
 
-    let [factory, contract] = await deployContracts(abi, bytecode, constructor)
+    if (!contractFilename) {
+      throw new Error('Cannot deploy contract, no filename provided')
+    }
 
-    globalContract = contract
+    const [abis, byteCodes] = await compileContract(contractFilename)
 
-    return res.status(200).send({ message: 'Contract Deployed' })
+    let tempFactory
+    let tempContract
+    if (constructor) {
+      let [factory, contract] = await deployContracts(
+        abis,
+        byteCodes,
+        constructor,
+      )
+
+      tempFactory = factory
+      tempContract = contract
+    } else {
+      let [factory, contract] = await deployContracts(abis, byteCodes, [])
+
+      tempFactory = factory
+      tempContract = contract
+    }
+
+    let tempContractData = {
+      contract: tempContract,
+      abis: abis,
+      transactions: [],
+    }
+
+    contracts[contractFilename]['currentVersion'] = tempContractData
+    contracts[contractFilename]['historicalChanges'].push(tempContractData)
+
+    console.log(contracts[contractFilename])
+
+    return res.status(200).send({
+      message: 'Contract Deployed',
+      contract: contracts[contractFilename],
+    })
   } catch (e) {
-    console.log('Contract deployment error: ', e)
     return res.status(500).send({ error: e.message })
   }
 })
 
 app.get('/abi', async (req, res) => {
-  const { contractName } = req.query
-
   try {
+    const { contractName } = req.query
     let [abis, bytecode] = await compileContract(contractName)
-    globalAbis = abis
-    return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
+    return res.status(200).send({ abi: abis, bytecode: bytecode })
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
@@ -206,11 +212,6 @@ app.get('/subscribeToChanges', async (req, res) => {
   })
 })
 
-app.post('/test', (req, res) => {
-  refreshFrontend()
-  res.send(200)
-})
-
 app.get('/getHistoricalTransactions', async (req, res) => {
   try {
     return res
@@ -230,6 +231,49 @@ app.get('/currentContractAddress', (req, res) => {
 })
 
 app.listen(PORT)
+
+function getSolidityFiles() {
+  let filesReturned = getAllFiles(userRealDirectory)
+
+  filesReturned.map((file) => {
+    const basename = path.basename(file)
+    solidityFileDirMappings[[basename]] = file
+
+    if (!(basename in contracts)) {
+      contracts[basename] = {
+        currentVersion: {},
+        historicalChanges: [],
+      }
+    }
+  })
+}
+
+function getAllFiles(dirPath, arrayOfFiles) {
+  let files = fs.readdirSync(dirPath)
+
+  arrayOfFiles = arrayOfFiles || []
+
+  files.forEach(function (file) {
+    // Keep track of node_modules folder location (for use in imports) and return (no need to scan entire node_modules folder)
+    if (file.includes('node_modules')) {
+      node_modulesDirLocation = path.join(dirPath, '/', file)
+      return
+    }
+    // Same as above for lib/ (used in forge);
+    else if (file.includes('lib')) {
+      libDirLocation = path.join(dirPath, '/', file)
+      return
+    } else if (fs.statSync(dirPath + '/' + file).isDirectory()) {
+      arrayOfFiles = getAllFiles(dirPath + '/' + file, arrayOfFiles)
+    } else {
+      // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
+      if (file.split('.').pop() === 'sol' && file.split('.').length === 2)
+        arrayOfFiles.push(path.join(dirPath, '/', file))
+    }
+  })
+
+  return arrayOfFiles
+}
 
 async function compileSpecificSolVersion(input, version) {
   return new Promise(async (resolve, reject) => {
@@ -422,7 +466,6 @@ chokidar
         console.log(`Changes found in ${filePath}, redeployed contract`)
 
         globalContract = contract
-        globalAbis = abis
 
         refreshFrontend()
       } catch (e) {
