@@ -11,7 +11,7 @@ export default function Header(props) {
         <Link href="/">
           <div className="mx-auto hover:cursor-grab">
             <p className="text-2xl text-[#ffffff] font-bold">
-              Bagels 🥯
+              Bagels 
             </p>
           </div>
         </Link>

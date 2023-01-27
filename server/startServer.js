@@ -134,6 +134,7 @@ app.post('/executeTransaction', async (req, res) => {
   try {
     if (
       stateMutability === 'view' ||
+      stateMutability === 'pure' ||
       stateMutability === 'nonpayable' ||
       stateMutability === 'payable'
     ) {
@@ -183,8 +184,10 @@ app.post('/executeTransaction', async (req, res) => {
         result: functionResult[0] ? functionResult[0].toString() : '',
       })
     }
+    else { 
+      console.log('none of the above');
+    }
   } catch (e) {
-    console.log(e)
     return res.status(500).send({ error: e.message })
   }
 })
@@ -322,6 +325,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
+    console.log('error compiling: ', e); 
     throw new Error(e.message)
   }
 }
@@ -419,7 +423,7 @@ chokidar
         let [abis, bytecode] = await compileContract(path.basename(filePath))
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`Redepoloyed contract in ${filePath}`);
+        console.log(`Redepoloyed contract ${filePath}\n`);
 
         globalContract = contract
         globalAbis = abis
