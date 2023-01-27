@@ -365,12 +365,11 @@ export default function Contracts({ contractName }) {
                 </div>
                 <div className="flex flex-col w-full">
                   <div className="flex flex-col space-y-2">
-                    {console.log('transactions length: ', transactions.length)}
                     {filteredTransactions.length > 0 ? (
                       filteredTransactions
                         .map((val, idx) => {
                           return (
-                            <Transaction val={val} idx={idx} />
+                            <Transaction val={val} idx={idx} filteredTransactionsLength={filteredTransactions.length}/>
                           )
                         })
                     ) : (
