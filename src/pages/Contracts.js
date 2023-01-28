@@ -238,6 +238,7 @@ export default function Contracts({ contractFilename }) {
                   idxOne={0}
                   getBalance={getBalance}
                   deployContract={TextInputDeployContract}
+                  contractFilename={contractFilename}
                 />
               </div>
             ) : (
@@ -297,6 +298,7 @@ export default function Contracts({ contractFilename }) {
                                     idxOne={idx}
                                     getBalance={getBalance}
                                     deployContract={TextInputDeployContract}
+                                    contractFilename={contractFilename}
                                   />
                                 </div>
                               )

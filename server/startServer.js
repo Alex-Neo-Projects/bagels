@@ -124,25 +124,58 @@ app.get('/balances', async (req, res) => {
 
 app.post('/executeTransaction', async (req, res) => {
   try {
-    const { contractFilename, amount, data } = req.body
+    const {
+      contractFilename,
+      amount,
+      functionName,
+      stateMutability,
+      type,
+      params,
+    } = req.body
+    // if (
+    //   !contractFilename ||
+    //   !amount ||
+    //   !functionName ||
+    //   !params ||
+    //   !stateMutability ||
+    //   !type
+    // ) {
+    //   throw new Error(
+    //     'Unable to execute transaction, please provide correct parameters',
+    //   )
+    // }
 
-    if (!contractFilename || !data) {
-      throw new Error(
-        'Unable to execute transaction, please provide correct parameters',
-      )
-    }
+    console.log(
+      contractFilename,
+      amount,
+      functionName,
+      stateMutability,
+      type,
+      params,
+    )
+
+    let iface = new ethers.utils.Interface(
+      Object.values(contracts[contractFilename]['currentVersion']['abis']).flat(
+        1,
+      ),
+    )
+    const functionEncodedSignature = iface.encodeFunctionData(functionName, [
+      ...params.map((param) => param[0]),
+    ])
 
     let paramData = {
       from: wallet.address,
       to: contracts[contractFilename]['currentVersion']['contract']['address'],
-      value: amount ? amount : 0,
-      data: data,
+      value: amount ? amount : "0x0",
+      data: functionEncodedSignature,
     }
 
-    const txRes = await fetch(`http://127.0.0.1:9091`, {
+    console.log(paramData)
+    
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         jsonrpc: '2.0',
@@ -151,8 +184,8 @@ app.post('/executeTransaction', async (req, res) => {
         id: 1,
       }),
     })
-
-    console.log(txRes)
+    console.log(txRes.status)
+    console.log(await txRes.json())
     // Store transaction in contract history
   } catch (e) {
     return res.status(500).send({ error: e.message })
