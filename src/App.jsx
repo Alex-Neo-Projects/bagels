@@ -7,7 +7,7 @@ import './styles/globals.css'
 
 let App = () => (
   <div>
-    <Route path="/contracts/:contract">{(params) => <Contracts contractName={params.contract}/>}</Route>
+    <Route path="/contracts/:contract">{(params) => <Contracts contractFilename={params.contract}/>}</Route>
     <Route path="/" component={Home} />
   </div>
 )

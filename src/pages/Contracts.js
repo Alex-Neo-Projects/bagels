@@ -16,36 +16,42 @@ import {
   plainSubtitleStyle,
 } from '../githubTheme'
 
-export default function Contracts({ contractName }) {
+export default function Contracts({ contractFilename }) {
+  const [contract, setContract] = useState(null)
   const [balances, setBalances] = useState()
   const [abiState, setAbiState] = useState()
-  const [constructorIndex, setConstructorIndex] = useState()
+  const [hasConstructor, setHasConstructor] = useState(false)
   const [constructorDeployed, setConstructorDeployed] = useState(false)
   const [contractAddress, setContractAddress] = useState()
 
   const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [transactions, setTransactions] = useState([])
-  const [contracts, setContracts] = useState([])
 
   const [contractNameState, setContractNameState] = useState()
-  const [bytecodeState, setBytecodeState] = useState()
 
   const [listening, setListening] = useState(false)
-
   const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!listening) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
 
-      events.onmessage = async(event) => {
+      events.onmessage = async (event) => {
         try {
-          const message = JSON.parse(event.data)
+          if (event) {
+            const message = JSON.parse(event.data)
 
-          if (message.msg === 'redeployed') {
-            await init()
-          } else if (message.error === 'error') {
-            throw new Error(message.error)
+            switch (message.msg) {
+              case 'redeployed': {
+                await init()
+                break
+              }
+              case error: {
+                throw new Error(message.error)
+              }
+            }
+          } else {
+            throw new Error('Unable to get event message')
           }
         } catch (e) {
           setError(e)
@@ -58,20 +64,21 @@ export default function Contracts({ contractName }) {
 
   async function init() {
     try {
-      Promise.all([getBalance(), getHistoricalTransactions()])
+      await getBalance()
 
-      const { returnedAbi, bytecode } = await getABI()
+      const { returnedAbi } = await getABI()
 
-      let constructorIndex = getConstructorAbiIndex(returnedAbi)
+      let hasConstructor =
+        Object.values(returnedAbi)
+          .flat(2)
+          .filter((curr) => curr.type === 'constructor').length > 0
 
-      if (constructorIndex !== -1) {
-        setConstructorIndex(constructorIndex)
+      if (hasConstructor) {
+        setHasConstructor(true)
         return
       }
 
-      await deployContract(returnedAbi, bytecode, [])
-
-      await getContractAddress()
+      await deployContract(contractFilename, [])
     } catch (e) {
       throw new Error(e.message)
     }
@@ -87,48 +94,19 @@ export default function Contracts({ contractName }) {
     setBalances({ balances: jsonifiedBalance })
   }
 
-  async function getHistoricalTransactions() {
-    try {
-      const transactions = await fetch(
-        `${SERVER_URL}/getHistoricalTransactions`,
-        {
-          method: 'GET',
-        },
-      )
-      const jsonifiedTransactions = await transactions.json()
-      setTransactions(jsonifiedTransactions.historicalTransactions)
-    } catch (e) {
-      throw new Error(e.message)
-    }
-  }
-
-  function getConstructorAbiIndex(abi) {
-    let abiValues = Object.values(abi)[0]
-
-    for (var index = 0; index < abiValues.length; index++) {
-      let currentItem = abiValues[index]
-
-      if (currentItem['type'] === 'constructor') {
-        return index
-      }
-    }
-    return -1
-  }
-
   async function TextInputDeployContract(constructor) {
-    await deployContract(abiState, bytecodeState, constructor)
+    await deployContract(contractFilename, constructor)
     setConstructorDeployed(true)
   }
 
-  async function deployContract(abi, bytecode, constructor) {
+  async function deployContract(contractFilename, constructor) {
     const deployment = await fetch(`${SERVER_URL}/deployContract`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        abi: abi,
-        bytecode: bytecode,
+        contractFilename: contractFilename,
         constructor: constructor,
       }),
     })
@@ -137,13 +115,15 @@ export default function Contracts({ contractName }) {
 
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error)
+    } else {
+      setContract(deploymentParsed['contract'])
     }
   }
 
   async function getABI() {
     try {
       const abiAndBytecode = await fetch(
-        `${SERVER_URL}/abi?contractName=${contractName}`,
+        `${SERVER_URL}/abi?contractName=${contractFilename}`,
         {
           method: 'GET',
         },
@@ -157,9 +137,7 @@ export default function Contracts({ contractName }) {
         )[0]
 
         setContractNameState(contractNameFromAbi)
-
         setAbiState(jsonifiedAbiAndBytecode['abi'])
-        setBytecodeState(jsonifiedAbiAndBytecode['bytecode'])
 
         return {
           returnedAbi: jsonifiedAbiAndBytecode['abi'],
@@ -168,18 +146,6 @@ export default function Contracts({ contractName }) {
       } else {
         throw new Error(jsonifiedAbiAndBytecode.error)
       }
-    } catch (e) {
-      throw new Error(e.message)
-    }
-  }
-
-  async function getContractAddress() {
-    try {
-      const address = await fetch(`${SERVER_URL}/currentContractAddress`, {
-        method: 'GET',
-      })
-      const addressJson = await address.json()
-      setContractAddress(addressJson['address'])
     } catch (e) {
       throw new Error(e.message)
     }
@@ -256,13 +222,15 @@ export default function Contracts({ contractName }) {
               </div>
             )}
 
-            {(!abiState || !balances) && !error ? (
+            {(!abiState || !balances || !contract) && !error && (
               <div className="max-w-lg">
                 <p className="text-md tracking-tighter text-left font-bold">
-                  Loading {contractName}
+                  Loading {contractFilename}
                 </p>
               </div>
-            ) : constructorIndex > -1 && !constructorDeployed ? (
+            )}
+
+            {hasConstructor && !constructorDeployed ? (
               <div className="flex flex-col justify-start space-y-4">
                 <p className="text-xl font-medium">Enter constructors:</p>
                 <TextInputs
@@ -273,71 +241,80 @@ export default function Contracts({ contractName }) {
                 />
               </div>
             ) : (
-              <div className="flex flex-col justify-start space-y-6">
-                {!error && (
-                  <div className="space-y-6">
-                    <div className="flex justify-start items-center">
-                      <h1 className={`${keywordStyleColoredTitle}`}>
-                        contract
-                      </h1>
-                      <h1 className={plainTitleStyle}>
-                        {contractNameState || ''}
-                      </h1>
-                    </div>
+              contract && (
+                <div className="flex flex-col justify-start space-y-6">
+                  {!error && (
+                    <div className="space-y-6">
+                      <div className="flex justify-start items-center">
+                        <h1 className={`${keywordStyleColoredTitle}`}>
+                          contract
+                        </h1>
+                        <h1 className={plainTitleStyle}>
+                          {contractNameState || ''}
+                        </h1>
+                      </div>
 
-                    <div className="flex flex-col space-y-2">
-                      <div className="space-y-1">
-                        <p className={plainSubtitleStyle}>Wallet address</p>
+                      <div className="flex flex-col space-y-2">
+                        <div className="space-y-1">
+                          <p className={plainSubtitleStyle}>Contract Address</p>
+                          <p className={subheading}>
+                            {(contract &&
+                              contract['currentVersion']['contract'][
+                                'address'
+                              ]) ||
+                              ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col space-y-2">
+                        <div className="space-y-1">
+                          <p className={plainSubtitleStyle}>Wallet address</p>
+                          <p className={subheading}>
+                            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col space-y-1">
+                        <p className={plainSubtitleStyle}>Token Balance</p>
                         <p className={subheading}>
-                          0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+                          ETH: {balances?.balances?.eth}
                         </p>
                       </div>
-                    </div>
 
-                    <div className="flex flex-col space-y-1">
-                      <p className={plainSubtitleStyle}>Token Balance</p>
-                      <p className={subheading}>
-                        ETH: {balances?.balances?.eth}
-                      </p>
-                    </div>
+                      <div className="flex flex-col pt-2">
+                        <div className="flex flex-col space-y-3">
+                          {abiState &&
+                            contractNameState &&
+                            abiState[contractNameState].map((val, idx) => {
+                              return (
+                                <div key={idx.toString()} className="space-y-2">
+                                  <div>{renderFunctionHeader(val)}</div>
 
-                    <div className="flex flex-col pt-2">
-                      {/* <p className={`${plainTitleStyle} pb-2`}>Read/write to the contract</p> */}
-
-                      <div className="flex flex-col space-y-3">
-                        {abiState &&
-                          contractNameState &&
-                          abiState[contractNameState].map((val, idx) => {
-                            return (
-                              <div key={idx.toString()} className="space-y-2">
-                                <div>{renderFunctionHeader(val)}</div>
-
-                                <TextInputs
-                                  val={val}
-                                  idxOne={idx}
-                                  getBalance={getBalance}
-                                  deployContract={TextInputDeployContract}
-                                  getHistoricalTransactions={
-                                    getHistoricalTransactions
-                                  }
-                                />
-                              </div>
-                            )
-                          })}
+                                  <TextInputs
+                                    val={val}
+                                    idxOne={idx}
+                                    getBalance={getBalance}
+                                    deployContract={TextInputDeployContract}
+                                  />
+                                </div>
+                              )
+                            })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )
             )}
           </div>
         </div>
 
-        <div className="flex flex-col space-y-4">
+        {/* <div className="flex flex-col space-y-4">
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
             <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
-                {/* Transaction TEMPLATE */}
                 <div className="flex flex-col justify-start items-start space-y-4">
                   <div className="flex flex-col">
                     <h1 className={plainTitleStyle}>Transactions</h1>
@@ -500,7 +477,7 @@ export default function Contracts({ contractName }) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </Header>
   )

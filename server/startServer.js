@@ -26,7 +26,7 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-let client
+let client = null
 let node_modulesDirLocation = ''
 let libDirLocation = ''
 let solidityFileDirMappings = {}
@@ -54,7 +54,6 @@ app.get('/', (req, res) => {
 app.get('/solidityFiles', async (req, res) => {
   try {
     getSolidityFiles()
-    console.log(contracts)
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
     return res.status(500).send({ error: e.message })
@@ -71,7 +70,6 @@ app.post('/deployContract', async (req, res) => {
 
     const [abis, byteCodes] = await compileContract(contractFilename)
 
-    let tempFactory
     let tempContract
     if (constructor) {
       let [factory, contract] = await deployContracts(
@@ -79,13 +77,9 @@ app.post('/deployContract', async (req, res) => {
         byteCodes,
         constructor,
       )
-
-      tempFactory = factory
       tempContract = contract
     } else {
       let [factory, contract] = await deployContracts(abis, byteCodes, [])
-
-      tempFactory = factory
       tempContract = contract
     }
 
@@ -97,8 +91,6 @@ app.post('/deployContract', async (req, res) => {
 
     contracts[contractFilename]['currentVersion'] = tempContractData
     contracts[contractFilename]['historicalChanges'].push(tempContractData)
-
-    console.log(contracts[contractFilename])
 
     return res.status(200).send({
       message: 'Contract Deployed',
@@ -122,75 +114,47 @@ app.get('/abi', async (req, res) => {
 app.get('/balances', async (req, res) => {
   try {
     const ether_balance = await checkEtherBalance(provider, wallet.address)
-
-    let balances = {
+    res.status(200).send({
       eth: ether_balance,
-    }
-
-    res.status(200).send(balances)
+    })
   } catch (e) {
-    console.error(e.message)
     res.status(500).send({ error: e.message })
   }
 })
 
 app.post('/executeTransaction', async (req, res) => {
-  const { functionName, params, stateMutability, amount } = req.body
-
   try {
-    if (
-      stateMutability === 'view' ||
-      stateMutability === 'nonpayable' ||
-      stateMutability === 'payable'
-    ) {
-      // Need to just call the function
-      let callFunctionString = 'globalContract.functions.' + functionName + '('
+    const { contractFilename, amount, data } = req.body
 
-      // param[0] === value
-      // param[1] === type
-      for (let paramIndex = 0; paramIndex < params.length; paramIndex++) {
-        // If it's a string, add quotation marks
-        if (
-          params[paramIndex][1] === 'string' ||
-          params[paramIndex][1] === 'address'
-        ) {
-          callFunctionString += "'" + params[paramIndex][0] + "'"
-        }
-        // If not a string, no need for quotation marks
-        else callFunctionString += params[paramIndex][0]
-
-        // Add commas if there are multiple params
-        if (paramIndex < params.length - 1) {
-          callFunctionString += ','
-        }
-      }
-
-      // payable functions
-      if (stateMutability === 'payable' && amount > 0) {
-        callFunctionString += `${
-          params.length === 0 ? '' : ','
-        }{value: ethers.utils.parseEther("${amount}")}`
-      }
-
-      callFunctionString += ')'
-
-      const functionResult = await eval(callFunctionString)
-
-      if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
-        historicalTransactions.unshift({
-          res: functionResult,
-          functionName: functionName,
-          params: params,
-          stateMutability: stateMutability,
-        })
-      }
-
-      return res.send({
-        result: functionResult[0] ? functionResult[0].toString() : '',
-      })
+    if (!contractFilename || !data) {
+      throw new Error(
+        'Unable to execute transaction, please provide correct parameters',
+      )
     }
+
+    let paramData = {
+      from: wallet.address,
+      to: contracts[contractFilename]['currentVersion']['contract']['address'],
+      value: amount ? amount : 0,
+      data: data,
+    }
+
+    const txRes = await fetch(`http://127.0.0.1:9091`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_sendTransaction',
+        params: [paramData],
+        id: 1,
+      }),
+    })
+
+    console.log(txRes)
+    // Store transaction in contract history
   } catch (e) {
-    console.log(e)
     return res.status(500).send({ error: e.message })
   }
 })
@@ -212,19 +176,13 @@ app.get('/subscribeToChanges', async (req, res) => {
   })
 })
 
-app.get('/getHistoricalTransactions', async (req, res) => {
+app.get('/getCurrentContract', async (req, res) => {
   try {
-    return res
-      .status(200)
-      .send({ historicalTransactions: historicalTransactions })
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/currentContractAddress', (req, res) => {
-  try {
-    return res.status(200).send({ address: globalContract['address'] })
+    const { contractFilename } = req.query
+    if (!contractFilename) {
+      throw new Error('No contract filename provided')
+    }
+    return res.status(200).send({ contract: contracts[contractFilename] })
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
