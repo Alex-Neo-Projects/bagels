@@ -4,7 +4,13 @@ import { SERVER_URL } from '../constants'
 
 const PORT = 9090
 
-export function TextInputs({ val, idxOne, getBalance, deployContract, contractFilename }) {
+export function TextInputs({
+  val,
+  idxOne,
+  getBalance,
+  deployContract,
+  contractFilename,
+}) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
@@ -15,7 +21,6 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, contractFi
   // Update fees when a trasaction gets executed
   useEffect(() => {
     getBalance()
-    console.log('executing tx')
   }, [])
 
   // index[0] === the param value
@@ -181,10 +186,10 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, contractFi
 
             if (val.type === 'constructor') {
               name = 'constructor'
-              console.log('WHAT IS BEING PASSED IN? ', inputs)
               await deployContract(inputs)
               return
             }
+            console.log('HELLO')
 
             const res = await fetch(`${SERVER_URL}/executeTransaction`, {
               method: 'POST',
@@ -201,13 +206,14 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, contractFi
               }),
             })
 
+            console.log()
+
             const jsonParsed = await res.json()
 
+            console.log(jsonParsed)
+
             if (res.status === 200) {
-              let showOutput = jsonParsed['result']
-                ? `${jsonParsed['result']}`
-                : 'Transaction successful.'
-              setOutput(showOutput)
+              setOutput(jsonParsed['output'] || '')
             } else if (res.status === 500) {
               setExecutionError(JSON.stringify(jsonParsed['error']))
             }
@@ -233,18 +239,23 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, contractFi
         </button>
       </div>
 
+
       {output && (
-        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
-          <p className="text-md font-bold">Output</p>
-          <div className="flex w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-            <p className="text-sm">{output}</p>
+        <div className='flex flex-col pt-4 space-y-4 w-full'>
+          <p className="text-md font-bold">Transaction Successful</p>
+          <div className="flex flex-row justify-start items-center space-x-4 w-full">
+            <p className="text-md font-bold">Output</p>
+
+            <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
+              <p className="text-sm">{output}</p>
+            </div>
           </div>
         </div>
       )}
 
       {error && (
-        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
-          <p className="text-md font-bold">Error</p>
+        <div className=" bg-red-500 flex flex-row justify-center items-center space-x-4 pt-4 w-full">
+          <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
             <p className="text-sm">{error}</p>
           </div>
@@ -253,7 +264,7 @@ export function TextInputs({ val, idxOne, getBalance, deployContract, contractFi
 
       {executionError && (
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full overflow-hidden break-all">
-          <p className="text-md font-bold">Error</p>
+          <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
             <p className="text-sm">{executionError}</p>
           </div>

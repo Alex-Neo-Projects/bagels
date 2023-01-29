@@ -7,4 +7,6 @@ contract TimeLockContract {
 	
 	address public owner;
 
+	constructor(string memory test) {}
+
 }

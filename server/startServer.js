@@ -155,25 +155,43 @@ app.post('/executeTransaction', async (req, res) => {
       ...params.map((param) => param[0]),
     ])
 
-    let paramData = {
-      from: wallet.address,
-      to: contracts[contractFilename]['currentVersion']['contract']['address'],
-      value: amount ? amount : '0x0',
-      data: functionEncodedSignature,
+    if (stateMutability === 'view' || stateMutability === 'pure') {
+      let paramData = {
+        from: wallet.address,
+        to:
+          contracts[contractFilename]['currentVersion']['contract']['address'],
+        data: functionEncodedSignature,
+      }
+
+      const txRes = await callTransaction(paramData)
+      const functionRes = iface.decodeFunctionResult(
+        `${functionName}()`,
+        txRes.result,
+      )
+
+      return res.status(200).send({ output: functionRes })
+    } else {
+      let paramData = {
+        from: wallet.address,
+        to:
+          contracts[contractFilename]['currentVersion']['contract']['address'],
+        value: amount ? amount : '0x0',
+        data: functionEncodedSignature,
+      }
+
+      const txRes = await sendTransaction(paramData)
+      const txReceipt = await getTransaction(txRes.result)
+
+      // Store transaction in contract history
+      let txData = {
+        paramData: paramData,
+        receipt: txReceipt.result,
+      }
+
+      contracts[contractFilename]['currentVersion']['transactions'].push(txData)
+
+      return res.status(200).send(txData)
     }
-
-    const txRes = await sendTransaction(paramData)
-    const txReceipt = await getTransaction(txRes.result)
-
-    // Store transaction in contract history
-    let txData = {
-      paramData: paramData,
-      receipt: txReceipt.result,
-    }
-
-    contracts[contractFilename]['currentVersion']['transactions'].push(txData)
-
-    return txData
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
@@ -220,6 +238,31 @@ async function sendTransaction(params) {
       body: JSON.stringify({
         jsonrpc: '2.0',
         method: 'eth_sendTransaction',
+        params: [params],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to send tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
+
+async function callTransaction(params) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_call',
         params: [params],
         id: 1,
       }),
@@ -492,8 +535,6 @@ chokidar
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
         console.log(`Changes found in ${filePath}, redeployed contract`)
-
-        globalContract = contract
 
         refreshFrontend()
       } catch (e) {
