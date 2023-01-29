@@ -132,27 +132,19 @@ app.post('/executeTransaction', async (req, res) => {
       type,
       params,
     } = req.body
-    // if (
-    //   !contractFilename ||
-    //   !amount ||
-    //   !functionName ||
-    //   !params ||
-    //   !stateMutability ||
-    //   !type
-    // ) {
-    //   throw new Error(
-    //     'Unable to execute transaction, please provide correct parameters',
-    //   )
-    // }
 
-    console.log(
-      contractFilename,
-      amount,
-      functionName,
-      stateMutability,
-      type,
-      params,
-    )
+    if (
+      !contractFilename ||
+      amount < 0 ||
+      !functionName ||
+      !params ||
+      !stateMutability ||
+      !type
+    ) {
+      throw new Error(
+        'Unable to execute transaction, please provide correct parameters',
+      )
+    }
 
     let iface = new ethers.utils.Interface(
       Object.values(contracts[contractFilename]['currentVersion']['abis']).flat(
@@ -166,27 +158,22 @@ app.post('/executeTransaction', async (req, res) => {
     let paramData = {
       from: wallet.address,
       to: contracts[contractFilename]['currentVersion']['contract']['address'],
-      value: amount ? amount : "0x0",
+      value: amount ? amount : '0x0',
       data: functionEncodedSignature,
     }
 
-    console.log(paramData)
-    
-    const txRes = await fetch(`http://127.0.0.1:8545`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_sendTransaction',
-        params: [paramData],
-        id: 1,
-      }),
-    })
-    console.log(txRes.status)
-    console.log(await txRes.json())
+    const txRes = await sendTransaction(paramData)
+    const txReceipt = await getTransaction(txRes.result)
+
     // Store transaction in contract history
+    let txData = {
+      paramData: paramData,
+      receipt: txReceipt.result,
+    }
+
+    contracts[contractFilename]['currentVersion']['transactions'].push(txData)
+
+    return txData
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
@@ -222,6 +209,56 @@ app.get('/getCurrentContract', async (req, res) => {
 })
 
 app.listen(PORT)
+
+async function sendTransaction(params) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_sendTransaction',
+        params: [params],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to send tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
+
+async function getTransaction(txHash) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getTransactionReceipt',
+        params: [txHash],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to get tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
