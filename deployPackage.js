@@ -23,18 +23,16 @@ async function updatePackageNumber() {
 function main() { 
   console.time('done installing 🥯')
   
+
+  console.log('updating package number...')
   updatePackageNumber(); 
   
-  console.log('bun remove'); 
-
-  execSync('bun remove -g bagels')
-
-  console.log('publish');
-
+  console.time('done publishing')
   execSync('npm publish');
+  console.timeEnd('done publishing')
   
-  console.log('bun install')
-  execSync('bun i -g bagels')
+  console.log('npm install')
+  execSync('npm i -g bagels')
   
   console.timeEnd('done installing 🥯')
 }
