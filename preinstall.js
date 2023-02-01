@@ -10,34 +10,47 @@ async function main() {
     console.log("\nNo forge installation found!\n")
     console.log("Installing forge...")
     
-    const { stdout, stderr } = spawnSync(
+    const { stdout: installFoundry, stderr: installFoundryErr } = spawnSync(
       'curl',
       [
         '-L',
         'https://foundry.paradigm.xyz',
         '|',
         'bash',
-        '&&',
-        'foundryup'
       ],
       {
         shell: true,
       },
     )
   
-    if (stderr) { 
-      console.log("STDERR: ", stderr.toString()); 
+    if (installFoundryErr) { 
+      console.log(installFoundryErr.toString()); 
     } 
 
-    if (stdout) { 
-      console.log("STDOUT: ", stdout.toString()); 
+    if (installFoundry) { 
+      console.log(installFoundry.toString()); 
     }
+
+    execSync('exec $SHELL');
+
+    console.log('installing foundryup... (be patient)')
+
+    const { stdout: foundryup, foundryupErr } = execSync(
+      'foundryup',
+      {
+        shell: true,
+      },
+    )
+
+    if (foundryup) { 
+      console.log(foundryup.toString()); 
+    } 
 
     console.log('\n\nSuccessfully installed forge.');
   }
 }
 
 main().catch((err) => {
-  console.error(err.message)
+  console.log('\n\n\nError installing foundry! To use bagels, you\'ll need foundry. Download it here: https://github.com/foundry-rs/foundry')
   process.exit(1)
 })
