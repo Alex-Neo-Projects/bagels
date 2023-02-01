@@ -423,7 +423,7 @@ chokidar
         let [abis, bytecode] = await compileContract(path.basename(filePath))
         let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`\nRedepoloyed contract ${filePath}\n`);
+        console.log(`\nRedeployed contract ${filePath}\n`);
 
         globalContract = contract
         globalAbis = abis
