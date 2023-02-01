@@ -10,7 +10,13 @@ https://user-images.githubusercontent.com/7016669/215215794-ad117c14-a251-4d60-a
 (excuse the video's low quality, it was hard to get it under the 10mb Github limit!)
 
 ## Installation setup:
-```
+
+You will first need to install [foundry/forge](https://github.com/foundry-rs/foundry), since bagels relies on it: 
+
+Run: ```curl -L https://foundry.paradigm.xyz | bash``` in your terminal and follow the instructions. 
+
+Then, install bagels: 
+``` 
 npm i -g bagels 
 ```
 
