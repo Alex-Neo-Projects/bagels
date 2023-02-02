@@ -52,13 +52,9 @@ async function main() {
   await updatePackageNumber(latestVersion); 
   console.timeEnd('updated package number')
 
-  console.time('done installing 🥯')
-  
   console.time('done publishing')
   execSync('npm publish');
   console.timeEnd('done publishing')
-  
-  console.timeEnd('done installing 🥯')
 }
 
 main();
