@@ -1,13 +1,11 @@
-import fs from 'fs'
+import fs, { stat } from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
-import path, { parse } from 'path'
-import { getSolcVersionFromContract } from '../utils.js'
-import { execSync } from 'child_process'
-import semver, { valid } from 'semver'
+import path from 'path'
+import semver from 'semver'
 import fetch from 'node-fetch'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
@@ -30,21 +28,6 @@ let client = null
 let node_modulesDirLocation = ''
 let libDirLocation = ''
 let solidityFileDirMappings = {}
-
-/*
-  contracts: {
-    'name.sol': {
-      currentVersion: {
-        abis: {}, 
-        transactions: [], 
-        contract: {}
-    }, 
-      historicalChanges: [
-        {...curentVersion}
-      ]
-    }
-  }
-*/
 let contracts = {}
 
 app.get('/', (req, res) => {
@@ -68,33 +51,38 @@ app.post('/deployContract', async (req, res) => {
       throw new Error('Cannot deploy contract, no filename provided')
     }
 
-    const [abis, byteCodes] = await compileContract(contractFilename)
+    let firstDeploy =
+      contracts[contractFilename]['historicalChanges'].length === 0
 
-    let tempContract
-    if (constructor) {
-      let [factory, contract] = await deployContracts(
-        abis,
-        byteCodes,
-        constructor,
+    if (firstDeploy) {
+      const [abis, byteCodes] = await compileContract(contractFilename)
+
+      let tempContract
+      if (constructor) {
+        let [factory, contract] = await deployContracts(
+          abis,
+          byteCodes,
+          constructor,
+        )
+        tempContract = contract
+      } else {
+        let [factory, contract] = await deployContracts(abis, byteCodes, [])
+        tempContract = contract
+      }
+
+      const contract = createNewContract(contractFilename, abis, tempContract)
+
+      contracts[contractFilename]['historicalChanges'].push(
+        contracts[contractFilename]['currentVersion'],
       )
-      tempContract = contract
-    } else {
-      let [factory, contract] = await deployContracts(abis, byteCodes, [])
-      tempContract = contract
-    }
+      contracts[contractFilename]['currentVersion'] = contract
 
-    let tempContractData = {
-      contract: tempContract,
-      abis: abis,
-      transactions: [],
+      console.log(contracts[contractFilename])
     }
-
-    contracts[contractFilename]['currentVersion'] = tempContractData
-    contracts[contractFilename]['historicalChanges'].push(tempContractData)
 
     return res.status(200).send({
       message: 'Contract Deployed',
-      contract: contracts[contractFilename],
+      contract: contracts[contractFilename]['currentVersion'],
     })
   } catch (e) {
     return res.status(500).send({ error: e.message })
@@ -184,7 +172,14 @@ app.post('/executeTransaction', async (req, res) => {
 
       // Store transaction in contract history
       let txData = {
-        paramData: paramData,
+        paramData: {
+          functionName: functionName,
+          params: params,
+          stateMutability: stateMutability,
+          type: type,
+          amount: amount,
+          rawData: functionEncodedSignature,
+        },
         receipt: txReceipt.result,
       }
 
@@ -226,7 +221,32 @@ app.get('/getCurrentContract', async (req, res) => {
   }
 })
 
+app.get('/getTransactions', async (req, res) => {
+  try {
+    const { contractFilename } = req.query
+    if (!contractFilename) {
+      throw new Error('No contract filename provided')
+    }
+    return res.status(200).send({
+      contract: contracts[contractFilename]['currentVersion']['transactions'],
+    })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
 app.listen(PORT)
+
+function createNewContract(filename, abis, contract) {
+  let res = {
+    contract: contract,
+    abis: abis,
+    hasConstructor: hasConstructor(abis),
+    transactions: [],
+  }
+
+  return res
+}
 
 async function sendTransaction(params) {
   try {
@@ -346,35 +366,35 @@ function getAllFiles(dirPath, arrayOfFiles) {
   return arrayOfFiles
 }
 
-async function compileSpecificSolVersion(input, version) {
-  return new Promise(async (resolve, reject) => {
-    await solc.loadRemoteVersion(version, function (err, solcSnapshot) {
-      if (err) {
-        console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
-        reject(err)
-      } else {
-        let output = JSON.parse(
-          solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
-        )
-        resolve(output)
-      }
-    })
-  })
-}
+// async function compileSpecificSolVersion(input, version) {
+//   return new Promise(async (resolve, reject) => {
+//     await solc.loadRemoteVersion(version, function (err, solcSnapshot) {
+//       if (err) {
+//         console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
+//         reject(err)
+//       } else {
+//         let output = JSON.parse(
+//           solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
+//         )
+//         resolve(output)
+//       }
+//     })
+//   })
+// }
 
 // Simply loop through solidity versions and pick the earliest version that is valid for the solc version specified in the contract
 // Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
-async function pickValidSolcVersion(contractSolcVersion) {
-  // TODO: Probably should just cache this locally instead of making this API call (slow) so often
-  const res = await fetch('https://binaries.soliditylang.org/bin/list.json')
-  const parsedRes = await res.json()
+// async function pickValidSolcVersion(contractSolcVersion) {
+//   // TODO: Probably should just cache this locally instead of making this API call (slow) so often
+//   const res = await fetch('https://binaries.soliditylang.org/bin/list.json')
+//   const parsedRes = await res.json()
 
-  const validVersion = parsedRes['builds'].find((item) =>
-    semver.satisfies(item['longVersion'], contractSolcVersion),
-  )
+//   const validVersion = parsedRes['builds'].find((item) =>
+//     semver.satisfies(item['longVersion'], contractSolcVersion),
+//   )
 
-  return 'v' + validVersion['longVersion']
-}
+//   return 'v' + validVersion['longVersion']
+// }
 
 async function compileContract(file) {
   try {
@@ -399,7 +419,6 @@ async function compileContract(file) {
         },
       },
     }
-    let output
 
     // Find specific solc version (slow, so commented out for now)
     // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
@@ -411,7 +430,7 @@ async function compileContract(file) {
     //   output = await compileSpecificSolVersion(input, validSolcVersion);
     // }
 
-    output = JSON.parse(
+    let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
 
@@ -437,6 +456,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
+    //restart solc
     throw new Error(e.message)
   }
 }
@@ -477,7 +497,6 @@ async function checkEtherBalance(provider, address) {
     const balanceInEther = ethers.utils.formatEther(balance)
     return balanceInEther
   } catch (e) {
-    console.log('error getting balance: ', e)
     throw new Error(e.message)
   }
 }
@@ -520,6 +539,14 @@ function sendErrorToFrontend(errorMessage) {
   client.write(`data: {"error": "${errorMessage}"}\n\n`)
 }
 
+function hasConstructor(abis) {
+  return (
+    Object.values(abis)
+      .flat(2)
+      .filter((curr) => curr.type === 'constructor').length > 0
+  )
+}
+
 chokidar
   .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
@@ -528,15 +555,32 @@ chokidar
   .on('all', async (event, filePath) => {
     if (event === 'change') {
       try {
-        console.log('Watching .sol file: ', event, filePath)
+        // NOTE: COMPILE CONTRACT BREAKS B/C OF SOLC
+        console.log(`Changes found in ${filePath}, redeploying contract`)
 
-        // If changes are made to sol file, redeploy that file
         let [abis, bytecode] = await compileContract(path.basename(filePath))
-        let [factory, contract] = await deployContracts(abis, bytecode, [])
 
-        console.log(`Changes found in ${filePath}, redeployed contract`)
-
-        refreshFrontend()
+        if (hasConstructor(abis)) {
+          contracts[filePath]['historicalChanges'].push(
+            contracts[filePath]['currentVersion'],
+          )
+          contracts[filePath]['currentVersion'] = createNewContract(
+            filePath,
+            abis,
+            {},
+          )
+        } else {
+          let [factory, contract] = await deployContracts(abis, bytecode, [])
+          contracts[path]['historicalChanges'].push(
+            contracts[path]['currentVersion'],
+          )
+          contracts[path]['currentVersion'] = createNewContract(
+            filePath,
+            abis,
+            contract,
+          )
+        }
+        return refreshFrontend()
       } catch (e) {
         // send error to frontend
         sendErrorToFrontend(e.message)

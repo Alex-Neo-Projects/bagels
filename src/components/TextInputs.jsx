@@ -7,16 +7,19 @@ const PORT = 9090
 export function TextInputs({
   val,
   idxOne,
+  contract,
+  hasConstructor,
   getBalance,
   deployContract,
   contractFilename,
+  getContract,
 }) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
-  const [executionError, setExecutionError] = useState()
-  const [output, setOutput] = useState()
-  const [error, setError] = useState()
+  const [executionError, setExecutionError] = useState(null)
+  const [output, setOutput] = useState(null)
+  const [error, setError] = useState(null)
 
   // Update fees when a trasaction gets executed
   useEffect(() => {
@@ -142,6 +145,7 @@ export function TextInputs({
     >
       <div className="flex flex-row justify-end w-full items-center space-x-4">
         {val.inputs.map((param, idx) => {
+          console.log(param)
           return (
             <input
               key={idx.toString()}
@@ -182,14 +186,10 @@ export function TextInputs({
             // Execute transaction
             setExecutingTransaction(true)
 
-            let name = val.name
-
             if (val.type === 'constructor') {
-              name = 'constructor'
               await deployContract(inputs)
               return
             }
-            console.log('HELLO')
 
             const res = await fetch(`${SERVER_URL}/executeTransaction`, {
               method: 'POST',
@@ -206,14 +206,11 @@ export function TextInputs({
               }),
             })
 
-            console.log()
-
             const jsonParsed = await res.json()
-
-            console.log(jsonParsed)
-
+            console.log(jsonParsed['output'])
             if (res.status === 200) {
-              setOutput(jsonParsed['output'] || '')
+              setOutput(jsonParsed['output'] || ' ')
+              getContract()
             } else if (res.status === 500) {
               setExecutionError(JSON.stringify(jsonParsed['error']))
             }
@@ -239,22 +236,23 @@ export function TextInputs({
         </button>
       </div>
 
-
       {output && (
-        <div className='flex flex-col pt-4 space-y-4 w-full'>
+        <div className="flex flex-col pt-4 space-y-4 w-full">
           <p className="text-md font-bold">Transaction Successful</p>
-          <div className="flex flex-row justify-start items-center space-x-4 w-full">
-            <p className="text-md font-bold">Output</p>
-
-            <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-              <p className="text-sm">{output}</p>
+          {(val.stateMutability === 'view' ||
+            val.stateMutability === 'pure') && (
+            <div className="flex flex-row justify-start items-center space-x-4 w-full">
+              <p className="text-md font-bold">Output</p>
+              <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
+                <p className="text-sm">{JSON.stringify(output)}</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {error && (
-        <div className=" bg-red-500 flex flex-row justify-center items-center space-x-4 pt-4 w-full">
+        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
           <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
             <p className="text-sm">{error}</p>

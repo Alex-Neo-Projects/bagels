@@ -18,8 +18,8 @@ import {
 
 export default function Contracts({ contractFilename }) {
   const [contract, setContract] = useState(null)
-  const [balances, setBalances] = useState()
-  const [abiState, setAbiState] = useState()
+  const [balances, setBalances] = useState(null)
+  const [abiState, setAbiState] = useState(null)
   const [hasConstructor, setHasConstructor] = useState(false)
   const [constructorDeployed, setConstructorDeployed] = useState(false)
   const [contractAddress, setContractAddress] = useState()
@@ -27,7 +27,7 @@ export default function Contracts({ contractFilename }) {
   const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [transactions, setTransactions] = useState([])
 
-  const [contractNameState, setContractNameState] = useState()
+  const [contractNameState, setContractNameState] = useState(null)
 
   const [listening, setListening] = useState(false)
   const [error, setError] = useState(null)
@@ -43,6 +43,7 @@ export default function Contracts({ contractFilename }) {
 
             switch (message.msg) {
               case 'redeployed': {
+                clear()
                 await init()
                 break
               }
@@ -62,11 +63,25 @@ export default function Contracts({ contractFilename }) {
     }
   }, [listening])
 
+  function clear() {
+    setError(null)
+    setContract(null)
+    setBalances(null)
+    setAbiState(null)
+    setTransactions([])
+    setContractNameState(null)
+  }
+
   async function init() {
+    console.log('Running init again')
+
     try {
+      console.log('Get Contract and Balance')
+
       await getBalance()
 
       const { returnedAbi } = await getABI()
+      console.log('Get ABI', returnedAbi)
 
       let hasConstructor =
         Object.values(returnedAbi)
@@ -74,9 +89,13 @@ export default function Contracts({ contractFilename }) {
           .filter((curr) => curr.type === 'constructor').length > 0
 
       if (hasConstructor) {
+        console.log('has a constructor broooooo')
+
         setHasConstructor(true)
         return
       }
+
+      console.log('doesnt have constructor brooooooo')
 
       await deployContract(contractFilename, [])
     } catch (e) {
@@ -112,10 +131,13 @@ export default function Contracts({ contractFilename }) {
     })
 
     const deploymentParsed = await deployment.json()
+    console.log(deploymentParsed)
 
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error)
     } else {
+      console.log(deploymentParsed['contract']['contract']['address'])
+      setContractAddress(deploymentParsed['contract']['contract']['address'])
       setContract(deploymentParsed['contract'])
     }
   }
@@ -145,6 +167,29 @@ export default function Contracts({ contractFilename }) {
         }
       } else {
         throw new Error(jsonifiedAbiAndBytecode.error)
+      }
+    } catch (e) {
+      throw new Error(e.message)
+    }
+  }
+
+  async function getContract() {
+    try {
+      const contractRes = await fetch(
+        `${SERVER_URL}/getCurrentContract?contractFilename=${contractFilename}`,
+        {
+          method: 'GET',
+        },
+      )
+
+      const contractResParsed = await contractRes.json()
+
+      if (contractRes.status === 200) {
+        setTransactions(
+          contractResParsed['contract']['currentVersion']['transactions'],
+        )
+      } else {
+        throw new Error('Unable to fetch contract')
       }
     } catch (e) {
       throw new Error(e.message)
@@ -217,12 +262,12 @@ export default function Contracts({ contractFilename }) {
             {error && (
               <div className="justify-start items-start pt-1 w-full">
                 <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
-                  Error: {error.message}
+                  Error: {error?.message || ''}
                 </p>
               </div>
             )}
 
-            {(!abiState || !balances || !contract) && !error && (
+            {(!abiState || !balances) && !error && (
               <div className="max-w-lg">
                 <p className="text-md tracking-tighter text-left font-bold">
                   Loading {contractFilename}
@@ -230,16 +275,27 @@ export default function Contracts({ contractFilename }) {
               </div>
             )}
 
-            {hasConstructor && !constructorDeployed ? (
+            {hasConstructor && !constructorDeployed && !contract ? (
               <div className="flex flex-col justify-start space-y-4">
                 <p className="text-xl font-medium">Enter constructors:</p>
-                <TextInputs
-                  val={abiState[contractNameState][constructorIndex]}
-                  idxOne={0}
-                  getBalance={getBalance}
-                  deployContract={TextInputDeployContract}
-                  contractFilename={contractFilename}
-                />
+                {abiState &&
+                  contractNameState &&
+                  abiState[contractNameState]
+                    .filter((constructor) => constructor.type === 'constructor')
+                    .map((val, idx) => {
+                      return (
+                        <TextInputs
+                          val={val}
+                          idxOne={idx}
+                          contract={contract}
+                          hasConstructor={hasConstructor}
+                          contractFilename={contractFilename}
+                          getBalance={getBalance}
+                          deployContract={TextInputDeployContract}
+                          getContract={getContract}
+                        />
+                      )
+                    })}
               </div>
             ) : (
               contract && (
@@ -258,13 +314,7 @@ export default function Contracts({ contractFilename }) {
                       <div className="flex flex-col space-y-2">
                         <div className="space-y-1">
                           <p className={plainSubtitleStyle}>Contract Address</p>
-                          <p className={subheading}>
-                            {(contract &&
-                              contract['currentVersion']['contract'][
-                                'address'
-                              ]) ||
-                              ''}
-                          </p>
+                          <p className={subheading}>{contractAddress || ''}</p>
                         </div>
                       </div>
 
@@ -280,7 +330,7 @@ export default function Contracts({ contractFilename }) {
                       <div className="flex flex-col space-y-1">
                         <p className={plainSubtitleStyle}>Token Balance</p>
                         <p className={subheading}>
-                          ETH: {balances?.balances?.eth}
+                          ETH: {balances.balances.eth || '0'}
                         </p>
                       </div>
 
@@ -288,21 +338,28 @@ export default function Contracts({ contractFilename }) {
                         <div className="flex flex-col space-y-3">
                           {abiState &&
                             contractNameState &&
-                            abiState[contractNameState].map((val, idx) => {
-                              return (
-                                <div key={idx.toString()} className="space-y-2">
-                                  <div>{renderFunctionHeader(val)}</div>
-
-                                  <TextInputs
-                                    val={val}
-                                    idxOne={idx}
-                                    getBalance={getBalance}
-                                    deployContract={TextInputDeployContract}
-                                    contractFilename={contractFilename}
-                                  />
-                                </div>
-                              )
-                            })}
+                            abiState[contractNameState]
+                              .filter((input) => input.type !== 'constructor')
+                              .map((val, idx) => {
+                                return (
+                                  <div
+                                    key={idx.toString()}
+                                    className="space-y-2"
+                                  >
+                                    <div>{renderFunctionHeader(val)}</div>
+                                    <TextInputs
+                                      val={val}
+                                      hasConstructor={hasConstructor}
+                                      contract={contract}
+                                      contractFilename={contractFilename}
+                                      idxOne={idx}
+                                      getBalance={getBalance}
+                                      deployContract={TextInputDeployContract}
+                                      getContract={getContract}
+                                    />
+                                  </div>
+                                )
+                              })}
                         </div>
                       </div>
                     </div>
@@ -313,7 +370,7 @@ export default function Contracts({ contractFilename }) {
           </div>
         </div>
 
-        {/* <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-4">
           <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
             <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
               <div className="flex flex-col justify-start space-y-4">
@@ -327,46 +384,43 @@ export default function Contracts({ contractFilename }) {
                   </div>
                   <div className="flex flex-col w-full">
                     <div className="flex flex-col space-y-2">
-                      {transactions.length > 0 ? (
-                        transactions
-                          .filter((transaction, _) => {
-                            return transaction.res.to === contractAddress
-                          })
-                          .map((val, idx) => {
-                            return (
-                              <div
-                                key={idx.toString()}
-                                className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
-                              >
-                                <div>
-                                  <p className="text-lg font-extrabold">
-                                    Transaction #
-                                    {(transactions.length - idx).toString()}
-                                  </p>
-                                </div>
+                      {transactions?.length > 0 ? (
+                        transactions.map((val, idx) => {
+                          return (
+                            <div
+                              key={idx.toString()}
+                              className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
+                            >
+                              <div>
+                                <p className="text-lg font-extrabold">
+                                  Transaction #
+                                  {(transactions.length - idx).toString()}
+                                </p>
+                              </div>
 
+                              <div className="flex flex-col space-y-4">
                                 <div className="flex flex-col space-y-4">
-                                  <div className="flex flex-col space-y-4">
-                                    <div className="flex flex-col space-y-1">
-                                      <p className="text-md font-bold">
-                                        Function:
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">
+                                      Function:
+                                    </p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">
+                                        {val.paramData.functionName}(
+                                        {val.paramData.params.length > 0
+                                          ? ''
+                                          : ' '}
+                                        ) {val.paramData.stateMutability}
                                       </p>
-                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                        <p className="text-sm">
-                                          {val.functionName}(
-                                          {val.params.length > 0 ? '' : ' '}){' '}
-                                          {val.stateMutability}
-                                        </p>
-                                      </div>
                                     </div>
+                                  </div>
 
-                                    <div className="flex flex-col space-y-2">
-                                      <p className="text-md font-bold">
-                                        Params:
-                                      </p>
+                                  <div className="flex flex-col space-y-2">
+                                    <p className="text-md font-bold">Params:</p>
 
-                                      <div className="space-y-6">
-                                        {val.params.map((param, paramsVal) => {
+                                    <div className="space-y-6">
+                                      {val.paramData.params.map(
+                                        (param, paramsVal) => {
                                           return (
                                             <div className="pl-2 space-y-2">
                                               <div className="flex flex-row space-x-4 justify-center items-center">
@@ -398,76 +452,77 @@ export default function Contracts({ contractFilename }) {
                                               </div>
                                             </div>
                                           )
-                                        })}
-                                      </div>
+                                        },
+                                      )}
                                     </div>
                                   </div>
                                 </div>
+                              </div>
 
-                                {!showMoreInfo && (
+                              {!showMoreInfo && (
+                                <div className="flex flex-col space-y-1">
+                                  <div
+                                    onClick={() => setShowMoreInfo(true)}
+                                    className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
+                                  >
+                                    <p className="text-sm">More info</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {showMoreInfo && (
+                                <>
                                   <div className="flex flex-col space-y-1">
-                                    <div
-                                      onClick={() => setShowMoreInfo(true)}
-                                      className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
-                                    >
-                                      <p className="text-sm">More info</p>
+                                    <p className="text-md font-bold">Hash</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">
+                                        {val.receipt.transactionHash}
+                                      </p>
                                     </div>
                                   </div>
-                                )}
 
-                                {showMoreInfo && (
-                                  <>
-                                    <div className="flex flex-col space-y-1">
-                                      <p className="text-md font-bold">Hash</p>
-                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                        <p className="text-sm">
-                                          {val.res.hash}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex flex-col space-y-1">
-                                      <p className="text-md font-bold">To</p>
-                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                        <p className="text-sm">{val.res.to}</p>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex flex-col space-y-1">
-                                      <p className="text-md font-bold">From</p>
-                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                        <p className="text-sm">
-                                          {val.res.from}
-                                        </p>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex flex-col space-y-1">
-                                      <p className="text-md font-bold">
-                                        Raw data
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">To</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">
+                                        {val.receipt.to}
                                       </p>
-                                      <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                        <p className="test-sm">
-                                          {val.res.data}
-                                        </p>
-                                      </div>
                                     </div>
+                                  </div>
 
-                                    <div className="flex flex-col space-y-1">
-                                      <div
-                                        onClick={() => setShowMoreInfo(false)}
-                                        className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
-                                      >
-                                        <p className="text-sm">
-                                          Hide more info
-                                        </p>
-                                      </div>
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">From</p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="text-sm">
+                                        {val.receipt.from}
+                                      </p>
                                     </div>
-                                  </>
-                                )}
-                              </div>
-                            )
-                          })
+                                  </div>
+
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-md font-bold">
+                                      Raw data
+                                    </p>
+                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
+                                      <p className="test-sm">
+                                        {val.paramData.rawData}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-col space-y-1">
+                                    <div
+                                      onClick={() => setShowMoreInfo(false)}
+                                      className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
+                                    >
+                                      <p className="text-sm">Hide more info</p>
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })
                       ) : (
                         <div className="pt-4">
                           <p>No Transactions Found</p>
@@ -479,7 +534,7 @@ export default function Contracts({ contractFilename }) {
               </div>
             </div>
           </div>
-        </div> */}
+        </div>
       </div>
     </Header>
   )
