@@ -14,10 +14,7 @@ export function startupAnvil(network = '') {
     ]
   }
 
-  // args.push('-b')
-  // args.push('1')
-
-  const res = spawn('anvil', args, {
+  const res = spawn('./anvil', args, {
     shell: true,
     stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
   })
