@@ -11,11 +11,7 @@ https://user-images.githubusercontent.com/7016669/215215794-ad117c14-a251-4d60-a
 
 ## Installation setup:
 
-You will first need to install [foundry/forge](https://github.com/foundry-rs/foundry), since bagels relies on it: 
-
-Run: ```curl -L https://foundry.paradigm.xyz | bash``` in your terminal and follow the instructions. 
-
-Then, install bagels: 
+Install bagels: 
 ``` 
 npm i -g bagels 
 ```
@@ -36,3 +32,7 @@ Join our [discord](https://discord.gg/DC77fxj3ks)!
    - Bagels is about making the initial process of writing contracts faster and more fun by tightening the feedback loop.
 3) **Bagels doesn't (YET) work with contracts requiring different versions of solidity than the one you have installed locally**
    - to check your solc version, do `solcjs --version` in the command line.
+
+## Acknowledgements
+
+- Shoutout to [foundry](https://github.com/foundry-rs/foundry), because we use Anvil in this project for the local network :)
