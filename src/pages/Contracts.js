@@ -275,7 +275,7 @@ export default function Contracts({ contractName }) {
   return (
     <Header>
       <div className="md:space-x-2 space-y-4 md:space-y-0 flex md:flex-row flex-col">
-        <div className="flex lg:w-1/2">
+        <div className="flex lg:w-1/2 w-full">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {error && (
               <div className="justify-start items-start pt-1 w-full">
@@ -314,7 +314,7 @@ export default function Contracts({ contractName }) {
                       </h1>
                     </div>
 
-                    <div className="flex flex-col space-y-2">
+                    <div className="flex flex-col space-y-2 ">
                       <div className="space-y-1">
                         <p className={plainSubtitleStyle}>Wallet address</p>
                         <p className={subheading}>
@@ -362,7 +362,7 @@ export default function Contracts({ contractName }) {
           </div>
         </div>
 
-        <div className="flex lg:w-1/2 ">
+        <div className="flex lg:w-1/2 w-full">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             <div className="flex flex-col justify-start space-y-4">
               <div className="flex flex-col justify-start items-start space-y-4">

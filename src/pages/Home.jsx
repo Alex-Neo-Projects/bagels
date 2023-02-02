@@ -48,7 +48,10 @@ export default function Home() {
             </div>
 
             {loading && (
-              <LoadingSpinner></LoadingSpinner>
+              <>
+                <LoadingSpinner></LoadingSpinner>
+                <p className='text-center text-md'>If this takes more than a second to load, try refreshing the page!</p>
+              </>
             )}
 
             {!loading && solidityFiles.length === 0 && (

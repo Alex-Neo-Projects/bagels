@@ -9,11 +9,10 @@
     "./src/**",
     "./network/**",
     "./esbuildConfig.js",
-    "./preinstall.js",
+    "./anvil",
     "./utils.js"
   ],
   "scripts": {
-    "preinstall": "node preinstall.js",
     "tailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --watch",
     "minifyTailwind": "npx --silent tailwindcss -i ./src/styles/globals.css -o ./public/build/output.css --minify",
     "network": "node ./network/startNetwork.js",
