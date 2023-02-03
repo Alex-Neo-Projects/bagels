@@ -2,10 +2,13 @@
 import { spawn } from 'child_process'
 import { kill } from 'process'
 import { isMainThread, parentPort } from 'worker_threads'
+import { getFilepath, getPathDirname } from '../utils.js';
 
 let anvilProcessGlobal
 
 export function startupAnvil(network = '') {
+  const anvilDir = getFilepath([getPathDirname()])
+
   let args = []
   if (network === 'mainnet') {
     args = [
@@ -15,6 +18,7 @@ export function startupAnvil(network = '') {
   }
 
   const res = spawn('./anvil', args, {
+    cwd: anvilDir,
     shell: true,
     stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
   })
