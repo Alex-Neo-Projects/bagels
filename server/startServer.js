@@ -382,8 +382,8 @@ function findImports(fileName) {
     if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
       file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
     } else {
-      let nodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
-      let forgePackagePath = path.join(libDirLocation, justTheFileName)
+      let nodePackagePath = path.join(node_modulesDirLocation, fileName)
+      let forgePackagePath = path.join(libDirLocation, fileName)
 
       if (fs.existsSync(nodePackagePath)) {
         file = fs.readFileSync(nodePackagePath)
