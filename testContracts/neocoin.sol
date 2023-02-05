@@ -9,4 +9,9 @@ contract TimeLockContract {
 
 	//NOTE: commenting here causes crash
 	// constrtor(string memory test, string memory thatsAFloater) {}
+
+	function testMultiple() public view returns (string memory s, string memory t) {
+		s = "hello";
+		t = "world"; 
+	}
 }
