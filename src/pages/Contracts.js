@@ -79,6 +79,7 @@ export default function Contracts({ contractFilename }) {
       console.log('Get Contract and Balance')
 
       await getBalance()
+      await getContract()
 
       const { returnedAbi } = await getABI()
       console.log('Get ABI', returnedAbi)

@@ -7,6 +7,7 @@ import chokidar from 'chokidar'
 import path from 'path'
 import semver from 'semver'
 import fetch from 'node-fetch'
+import { execSync } from 'child_process'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -457,6 +458,7 @@ async function compileContract(file) {
     return [abis, byteCodes]
   } catch (e) {
     //restart solc
+    execSync('solc')
     throw new Error(e.message)
   }
 }
@@ -557,33 +559,40 @@ chokidar
       try {
         // NOTE: COMPILE CONTRACT BREAKS B/C OF SOLC
         console.log(`Changes found in ${filePath}, redeploying contract`)
-
-        let [abis, bytecode] = await compileContract(path.basename(filePath))
+        let fileBasename = path.basename(filePath)
+        let [abis, bytecode] = await compileContract(fileBasename)
 
         if (hasConstructor(abis)) {
-          contracts[filePath]['historicalChanges'].push(
-            contracts[filePath]['currentVersion'],
+          console.log("has constructor")
+
+          contracts[fileBasename]['historicalChanges'].push(
+            contracts[fileBasename]['currentVersion'],
           )
-          contracts[filePath]['currentVersion'] = createNewContract(
+          contracts[fileBasename]['currentVersion'] = createNewContract(
             filePath,
             abis,
             {},
           )
         } else {
+          console.log("has no constructor")
+
           let [factory, contract] = await deployContracts(abis, bytecode, [])
-          contracts[path]['historicalChanges'].push(
-            contracts[path]['currentVersion'],
+          contracts[fileBasename]['historicalChanges'].push(
+            contracts[fileBasename]['currentVersion'],
           )
-          contracts[path]['currentVersion'] = createNewContract(
+          contracts[fileBasename]['currentVersion'] = createNewContract(
             filePath,
             abis,
             contract,
           )
         }
+
+        console.log('refrshing....')
         return refreshFrontend()
       } catch (e) {
         // send error to frontend
-        sendErrorToFrontend(e.message)
+        // sendErrorToFrontend(e.message)
+        console.log(e.message)
       }
     }
   })

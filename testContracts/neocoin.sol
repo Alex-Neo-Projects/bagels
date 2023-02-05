@@ -5,7 +5,8 @@ contract TimeLockContract {
 	uint public constant MAX_DELAY = 1000; 
 	uint public constant GRACE_PERIOD = 1000; 
 	
-	// address public owner;
+	address public owner;
 
-	constructor(string memory test, string memory thatsAFloater) {}
+	//NOTE: commenting here causes crash
+	// constructor(string memory test, string memory thatsAFloater) {}
 }
