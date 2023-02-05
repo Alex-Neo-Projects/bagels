@@ -8,5 +8,5 @@ contract TimeLockContract {
 	address public owner;
 
 	//NOTE: commenting here causes crash
-	// constructor(string memory test, string memory thatsAFloater) {}
+	// constrtor(string memory test, string memory thatsAFloater) {}
 }

@@ -591,8 +591,7 @@ chokidar
         return refreshFrontend()
       } catch (e) {
         // send error to frontend
-        // sendErrorToFrontend(e.message)
-        console.log(e.message)
+        sendErrorToFrontend(e.message)
       }
     }
   })
