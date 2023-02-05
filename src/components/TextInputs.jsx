@@ -244,7 +244,13 @@ export function TextInputs({
             <div className="flex flex-row justify-start items-center space-x-4 w-full">
               <p className="text-md font-bold">Output</p>
               <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-                <p className="text-sm">{JSON.stringify(output)}</p>
+                {output.map((res, idx) => {
+                  return (
+                    <p key={idx.toString()} className="text-sm">
+                      {res}
+                    </p>
+                  )
+                })}
               </div>
             </div>
           )}

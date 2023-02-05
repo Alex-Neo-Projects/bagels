@@ -153,10 +153,12 @@ app.post('/executeTransaction', async (req, res) => {
       }
 
       const txRes = await callTransaction(paramData)
-      const functionRes = iface.decodeFunctionResult(
+      let functionRes = iface.decodeFunctionResult(
         `${functionName}()`,
         txRes.result,
       )
+
+      functionRes = functionRes.map((val) => val.toString())
 
       return res.status(200).send({ output: functionRes })
     } else {
@@ -563,7 +565,7 @@ chokidar
         let [abis, bytecode] = await compileContract(fileBasename)
 
         if (hasConstructor(abis)) {
-          console.log("has constructor")
+          console.log('has constructor')
 
           contracts[fileBasename]['historicalChanges'].push(
             contracts[fileBasename]['currentVersion'],
@@ -574,7 +576,7 @@ chokidar
             {},
           )
         } else {
-          console.log("has no constructor")
+          console.log('has no constructor')
 
           let [factory, contract] = await deployContracts(abis, bytecode, [])
           contracts[fileBasename]['historicalChanges'].push(
