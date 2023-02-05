@@ -10,8 +10,10 @@ contract TimeLockContract {
 	//NOTE: commenting here causes crash
 	// constrtor(string memory test, string memory thatsAFloater) {}
 
-	function testMultiple() public view returns (string memory s, string memory t) {
+	function testMultiple() public view returns (string memory s, string memory t, uint256 x, bytes32 p) {
 		s = "hello";
 		t = "world"; 
+		x = 100000000;
+		p = hex"69602a60005260206000f3600052600a6016f3";
 	}
 }
