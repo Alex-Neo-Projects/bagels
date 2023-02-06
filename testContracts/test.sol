@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract TestContract { 
-  string private theGreeting = 'sdfsdf FUCK!'; 
+  string private theGreeting = 'sdfsd sssssfdfdf'; 
   string public newVar = 'asdfasdfa';
 
   function greeting2() public view returns (string memory) { 

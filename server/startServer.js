@@ -77,8 +77,6 @@ app.post('/deployContract', async (req, res) => {
         contracts[contractFilename]['currentVersion'],
       )
       contracts[contractFilename]['currentVersion'] = contract
-
-      console.log(contracts[contractFilename])
     }
 
     return res.status(200).send({
@@ -565,8 +563,6 @@ chokidar
         let [abis, bytecode] = await compileContract(fileBasename)
 
         if (hasConstructor(abis)) {
-          console.log('has constructor')
-
           contracts[fileBasename]['historicalChanges'].push(
             contracts[fileBasename]['currentVersion'],
           )
@@ -576,8 +572,6 @@ chokidar
             {},
           )
         } else {
-          console.log('has no constructor')
-
           let [factory, contract] = await deployContracts(abis, bytecode, [])
           contracts[fileBasename]['historicalChanges'].push(
             contracts[fileBasename]['currentVersion'],
@@ -589,7 +583,6 @@ chokidar
           )
         }
 
-        console.log('refrshing....')
         return refreshFrontend()
       } catch (e) {
         // send error to frontend
