@@ -2,19 +2,21 @@ import { useEffect, useState } from 'react'
 import { TextInputs } from '../components/TextInputs'
 import Header from '../components/Header'
 import { SERVER_URL } from '../constants'
-import { LoadingSpinner } from '../components/LoadingSpinner'
-import { Link } from 'wouter'
 import {
-  titleColor,
   keywordStyleColoredTitle,
-  coloredTitleStyle,
   plainTitleStyle,
   subheading,
-  functionModiferStyle,
   keywordStyleColored,
   functionStyleColored,
   plainSubtitleStyle,
-} from '../githubTheme'
+  paranthesisStyle,
+  stateMutabilityStyle,
+  parameterTypeStyle,
+  parameterNameStyle,
+  commaStyle,
+  buttonBackgroundColor,
+} from '../theme'
+import { Transaction } from '../components/Transaction'
 
 export default function Contracts({ contractFilename }) {
   const [contract, setContract] = useState(null)
@@ -22,15 +24,21 @@ export default function Contracts({ contractFilename }) {
   const [abiState, setAbiState] = useState(null)
   const [hasConstructor, setHasConstructor] = useState(false)
   const [constructorDeployed, setConstructorDeployed] = useState(false)
-  const [contractAddress, setContractAddress] = useState()
+  const [contractAddress, setContractAddress] = useState(null)
 
-  const [showMoreInfo, setShowMoreInfo] = useState(false)
   const [transactions, setTransactions] = useState([])
 
   const [contractNameState, setContractNameState] = useState(null)
 
   const [listening, setListening] = useState(false)
+
+  const [forceTextInputReset, setNewForceTextInputResetVal] = useState(0)
+
   const [error, setError] = useState(null)
+
+  // const filteredTransactions = transactions.filter((transaction, _) => {
+  //   return transaction.res.to === contractAddress
+  // })
 
   useEffect(() => {
     if (!listening) {
@@ -45,6 +53,7 @@ export default function Contracts({ contractFilename }) {
               case 'redeployed': {
                 clear()
                 await init()
+                // setNewForceTextInputResetVal(Math.random());
                 break
               }
               case error: {
@@ -76,13 +85,10 @@ export default function Contracts({ contractFilename }) {
     console.log('Running init again')
 
     try {
-      console.log('Get Contract and Balance')
-
       await getBalance()
       await getContract()
 
       const { returnedAbi } = await getABI()
-      console.log('Get ABI', returnedAbi)
 
       let hasConstructor =
         Object.values(returnedAbi)
@@ -90,13 +96,9 @@ export default function Contracts({ contractFilename }) {
           .filter((curr) => curr.type === 'constructor').length > 0
 
       if (hasConstructor) {
-        console.log('has a constructor broooooo')
-
         setHasConstructor(true)
         return
       }
-
-      console.log('doesnt have constructor brooooooo')
 
       await deployContract(contractFilename, [])
     } catch (e) {
@@ -204,26 +206,42 @@ export default function Contracts({ contractFilename }) {
         return (
           <div>
             <p className={keywordStyleColored}>function</p>
-            <p className={functionStyleColored}>
-              {val.name}({inputsToString(val.inputs)})
+            <p className={`${functionStyleColored} ml-1`}>{val.name}</p>
+            <p className={`${paranthesisStyle}`}>(</p>
+            {/* Style comes from inputsToString */}
+            <p className="inline">{inputsToString(val.inputs)}</p>
+            <p className={`${paranthesisStyle}`}>)</p>
+            <p className={`${stateMutabilityStyle} ml-1`}>
+              {val.stateMutability}
             </p>
-            <p className={functionModiferStyle}>{val.stateMutability}</p>
           </div>
         )
-        break
       case 'receive':
-        header += `function ${val.name}(${inputsToString(val.inputs)}) ${
-          val.stateMutability
-        }`
-        break
+        // Note: receive (fallback) functions can't have a parameter
+        return (
+          <div>
+            <p className={`${keywordStyleColored}`}>receive</p>
+            <p className={`${functionStyleColored}`}>{val.name}</p>
+            <p className={`${paranthesisStyle}`}>()</p>
+            <p className={`${stateMutabilityStyle} ml-1`}>
+              {val.stateMutability}
+            </p>
+          </div>
+        )
       case 'constructor':
-        header += `constructor(${inputsToString(val.inputs)}) ${
-          val.stateMutability
-        }`
+        // Don't need to show the constructor on the next page
         break
       case 'fallback':
-        header += `fallback() ${val.stateMutability}`
-        break
+        return (
+          <div>
+            <p className={`${keywordStyleColored}`}>fallback</p>
+            <p className={`${functionStyleColored}`}>{val.name}</p>
+            <p className={`${paranthesisStyle}`}>()</p>
+            <p className={`${stateMutabilityStyle} ml-1`}>
+              {val.stateMutability}
+            </p>
+          </div>
+        )
       default:
         ''
     }
@@ -232,11 +250,21 @@ export default function Contracts({ contractFilename }) {
   }
 
   function inputsToString(valInputs) {
+    if (!valInputs) return ''
+
     const param = valInputs.map((input, idx) => {
       if (input) {
-        return `${input.type} ${input.name}${
-          valInputs.length - 1 === idx ? '' : ','
-        }`
+        return (
+          <div className="inline">
+            <p
+              className={`${parameterTypeStyle} inline mr-1`}
+            >{`${input.type}`}</p>
+            <p className={`${parameterNameStyle}`}>{`${input.name}`}</p>
+            <p className={`${commaStyle} inline`}>{`${
+              valInputs.length - 1 === idx ? '' : ', '
+            }`}</p>
+          </div>
+        )
       } else {
         return ''
       }
@@ -247,18 +275,8 @@ export default function Contracts({ contractFilename }) {
 
   return (
     <Header>
-      <div className="flex sm:flex-row flex-col w-full justify-center items-start sm:space-x-10 space-y-4 sm:space-y-0 overflow-auto">
-        <div className="px-2">
-          <Link href="/">
-            <button className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328] hover:bg-[#0E76FD]">
-              <div className="flex flex-row justify-center w-full items-center text-sm font-bold">
-                <p>Back</p>
-              </div>
-            </button>
-          </Link>
-        </div>
-
-        <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
+      <div className="md:space-x-2 space-y-4 md:space-y-0 flex md:flex-row flex-col">
+        <div className="flex lg:w-1/2 w-full">
           <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
             {error && (
               <div className="justify-start items-start pt-1 w-full">
@@ -341,6 +359,7 @@ export default function Contracts({ contractFilename }) {
                             contractNameState &&
                             abiState[contractNameState]
                               .filter((input) => input.type !== 'constructor')
+                              .reverse()
                               .map((val, idx) => {
                                 return (
                                   <div
@@ -371,165 +390,41 @@ export default function Contracts({ contractFilename }) {
           </div>
         </div>
 
-        <div className="flex flex-col space-y-4">
-          <div className="flex w-screen max-w-[40em] px-2 sm:px-0">
-            <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
-              <div className="flex flex-col justify-start space-y-4">
-                <div className="flex flex-col justify-start items-start space-y-4">
-                  <div className="flex flex-col">
-                    <h1 className={plainTitleStyle}>Transactions</h1>
-                    <p className="text-sm font-medium pt-2">
-                      The transactions below are specific to <i>this</i>{' '}
-                      contract deployment
-                    </p>
-                  </div>
-                  <div className="flex flex-col w-full">
-                    <div className="flex flex-col space-y-2">
-                      {transactions?.length > 0 ? (
-                        transactions.map((val, idx) => {
+        <div className="flex lg:w-1/2 w-full">
+          <div className=" text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4">
+            <div className="flex flex-col justify-start space-y-4">
+              <div className="flex flex-col justify-start items-start space-y-4">
+                <div className="flex flex-col">
+                  <h1 className={plainTitleStyle}>
+                    Transactions in this contract
+                  </h1>
+                </div>
+                <div className="flex flex-col w-full">
+                  <div className="flex flex-col space-y-2">
+                    {transactions?.length > 0 ? (
+                      transactions
+                        .filter(
+                          (transaction) =>
+                            transaction.res.to === contractAddress,
+                        )
+                        .map((val, idx) => {
                           return (
-                            <div
-                              key={idx.toString()}
-                              className="space-y-6 p-4 pl-4 pr-4 border border-[#93939328] rounded-2xl break-all overflow-hidden"
-                            >
-                              <div>
-                                <p className="text-lg font-extrabold">
-                                  Transaction #
-                                  {(transactions.length - idx).toString()}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-col space-y-4">
-                                <div className="flex flex-col space-y-4">
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">
-                                      Function:
-                                    </p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">
-                                        {val.paramData.functionName}(
-                                        {val.paramData.params.length > 0
-                                          ? ''
-                                          : ' '}
-                                        ) {val.paramData.stateMutability}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-2">
-                                    <p className="text-md font-bold">Params:</p>
-
-                                    <div className="space-y-6">
-                                      {val.paramData.params.map(
-                                        (param, paramsVal) => {
-                                          return (
-                                            <div className="pl-2 space-y-2">
-                                              <div className="flex flex-row space-x-4 justify-center items-center">
-                                                <div className="w-10">
-                                                  <p className="text-sm font-bold">
-                                                    Value
-                                                  </p>
-                                                </div>
-
-                                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
-                                                  <p className="text-sm font-bold">
-                                                    {param[0]}
-                                                  </p>
-                                                </div>
-                                              </div>
-
-                                              <div className="flex flex-row space-x-4 justify-center items-center">
-                                                <div className="w-10 ">
-                                                  <p className="text-sm font-bold">
-                                                    Type
-                                                  </p>
-                                                </div>
-
-                                                <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4 w-full">
-                                                  <p className="text-sm font-bold">
-                                                    {param[1]}
-                                                  </p>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )
-                                        },
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {!showMoreInfo && (
-                                <div className="flex flex-col space-y-1">
-                                  <div
-                                    onClick={() => setShowMoreInfo(true)}
-                                    className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
-                                  >
-                                    <p className="text-sm">More info</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {showMoreInfo && (
-                                <>
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">Hash</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">
-                                        {val.receipt.transactionHash}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">To</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">
-                                        {val.receipt.to}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">From</p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="text-sm">
-                                        {val.receipt.from}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <p className="text-md font-bold">
-                                      Raw data
-                                    </p>
-                                    <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-                                      <p className="test-sm">
-                                        {val.paramData.rawData}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex flex-col space-y-1">
-                                    <div
-                                      onClick={() => setShowMoreInfo(false)}
-                                      className="text-sm text-white hover:cursor-grab flex justify-center items-center w-30 h-10 pl-6 pr-6 p-6 rounded-lg bg-[#93939328]  hover:bg-[#0E76FD]"
-                                    >
-                                      <p className="text-sm">Hide more info</p>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
+                            <Transaction
+                              val={val}
+                              idx={idx}
+                              filteredTransactionsLength={
+                                filteredTransactions.length
+                              }
+                            />
                           )
                         })
-                      ) : (
-                        <div className="pt-4">
-                          <p>No Transactions Found</p>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="pt-4">
+                        <p className="text-md font-extrabold">
+                          No Transactions to show yet
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

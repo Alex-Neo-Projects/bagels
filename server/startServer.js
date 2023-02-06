@@ -367,36 +367,6 @@ function getAllFiles(dirPath, arrayOfFiles) {
   return arrayOfFiles
 }
 
-// async function compileSpecificSolVersion(input, version) {
-//   return new Promise(async (resolve, reject) => {
-//     await solc.loadRemoteVersion(version, function (err, solcSnapshot) {
-//       if (err) {
-//         console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
-//         reject(err)
-//       } else {
-//         let output = JSON.parse(
-//           solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
-//         )
-//         resolve(output)
-//       }
-//     })
-//   })
-// }
-
-// Simply loop through solidity versions and pick the earliest version that is valid for the solc version specified in the contract
-// Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
-// async function pickValidSolcVersion(contractSolcVersion) {
-//   // TODO: Probably should just cache this locally instead of making this API call (slow) so often
-//   const res = await fetch('https://binaries.soliditylang.org/bin/list.json')
-//   const parsedRes = await res.json()
-
-//   const validVersion = parsedRes['builds'].find((item) =>
-//     semver.satisfies(item['longVersion'], contractSolcVersion),
-//   )
-
-//   return 'v' + validVersion['longVersion']
-// }
-
 async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles()
@@ -514,8 +484,8 @@ function findImports(fileName) {
     if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
       file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
     } else {
-      let nodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
-      let forgePackagePath = path.join(libDirLocation, justTheFileName)
+      let nodePackagePath = path.join(node_modulesDirLocation, fileName)
+      let forgePackagePath = path.join(libDirLocation, fileName)
 
       if (fs.existsSync(nodePackagePath)) {
         file = fs.readFileSync(nodePackagePath)
