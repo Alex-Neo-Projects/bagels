@@ -416,8 +416,6 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    //restart solc
-    execSync('solc')
     throw new Error(e.message)
   }
 }
@@ -492,12 +490,15 @@ function findImports(fileName) {
 }
 
 function refreshFrontend() {
-  // send data to the client
-  client.write('data: {"msg": "redeployed"}\n\n')
+  if (client) {
+    client.write('data: {"msg": "redeployed"}\n\n')
+  }
 }
 
 function sendErrorToFrontend(errorMessage) {
-  client.write(`data: {"error": "${errorMessage}"}\n\n`)
+  if (client) {
+    client.write(`data: {"error": "${errorMessage}"}\n\n`)
+  }
 }
 
 function hasConstructor(abis) {
@@ -515,37 +516,28 @@ chokidar
   })
   .on('all', async (event, filePath) => {
     if (event === 'change') {
-      try {
-        // NOTE: COMPILE CONTRACT BREAKS B/C OF SOLC
-        console.log(`Changes found in ${filePath}, redeploying contract`)
+      console.log(`Changes found in ${filePath}, redeploying contract`)
 
-        let fileBasename = path.basename(filePath)
-        let [abis, bytecode] = await compileContract(fileBasename)
+      let fileBasename = path.basename(filePath)
+      let [abis, bytecode] = await compileContract(fileBasename)
 
-        if (hasConstructor(abis)) {
-          contracts[fileBasename]['historicalChanges'].push(
-            contracts[fileBasename]['currentVersion'],
-          )
-          contracts[fileBasename]['currentVersion'] = createNewContract(
-            filePath,
-            abis,
-            {},
-          )
-        } else {
-          let [factory, contract] = await deployContracts(abis, bytecode, [])
-          contracts[fileBasename]['historicalChanges'].push(
-            contracts[fileBasename]['currentVersion'],
-          )
-          contracts[fileBasename]['currentVersion'] = createNewContract(
-            filePath,
-            abis,
-            contract,
-          )
-        }
-
-        return refreshFrontend()
-      } catch (e) {
-        sendErrorToFrontend(e.message)
+      let tempContract = null
+      if (!hasConstructor(abis)) {
+        let [factory, contract] = await deployContracts(abis, bytecode, [])
+        tempContract = contract
       }
+
+      contracts[fileBasename]['historicalChanges'].push(
+        contracts[fileBasename]['currentVersion'],
+      )
+      contracts[fileBasename]['currentVersion'] = createNewContract(
+        filePath,
+        abis,
+        tempContract === null ? {} : tempContract,
+      )
+      return refreshFrontend()
     }
+  })
+  .on('error', (e) => {
+    sendErrorToFrontend(e.message)
   })
