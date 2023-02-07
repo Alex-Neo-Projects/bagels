@@ -4,11 +4,9 @@ import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
-import path, { parse } from 'path'
-import { getSolcVersionFromContract } from '../utils.js'
-import { execSync } from 'child_process'
-import semver, { valid } from 'semver'
+import path from 'path'
 import fetch from 'node-fetch'
+import { execSync } from 'child_process'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -26,18 +24,304 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-let client
-let globalContract
+let client = null
 let node_modulesDirLocation = ''
 let libDirLocation = ''
 let solidityFileDirMappings = {}
-let globalAbis = {}
-
-let historicalTransactions = []
+let contracts = {}
 
 app.get('/', (req, res) => {
   res.send('Debugging the contract')
 })
+
+app.get('/solidityFiles', async (req, res) => {
+  try {
+    getSolidityFiles()
+    return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.post('/deployContract', async (req, res) => {
+  try {
+    const { contractFilename, constructor } = req.body
+
+    if (!contractFilename) {
+      throw new Error('Cannot deploy contract, no filename provided')
+    }
+
+    let firstDeploy =
+      contracts[contractFilename]['historicalChanges'].length === 0
+
+    if (firstDeploy) {
+      const [abis, byteCodes] = await compileContract(contractFilename)
+
+      let tempContract
+      if (constructor) {
+        let [factory, contract] = await deployContracts(
+          abis,
+          byteCodes,
+          constructor,
+        )
+        tempContract = contract
+      } else {
+        let [factory, contract] = await deployContracts(abis, byteCodes, [])
+        tempContract = contract
+      }
+
+      const contract = createNewContract(contractFilename, abis, tempContract)
+
+      contracts[contractFilename]['historicalChanges'].push(
+        contracts[contractFilename]['currentVersion'],
+      )
+      contracts[contractFilename]['currentVersion'] = contract
+    }
+
+    return res.status(200).send({
+      message: 'Contract Deployed',
+      contract: contracts[contractFilename]['currentVersion'],
+    })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.get('/abi', async (req, res) => {
+  try {
+    const { contractName } = req.query
+    let [abis, bytecode] = await compileContract(contractName)
+    return res.status(200).send({ abi: abis, bytecode: bytecode })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.get('/balances', async (req, res) => {
+  try {
+    const ether_balance = await checkEtherBalance(provider, wallet.address)
+    res.status(200).send({
+      eth: ether_balance,
+    })
+  } catch (e) {
+    res.status(500).send({ error: e.message })
+  }
+})
+
+app.post('/executeTransaction', async (req, res) => {
+  try {
+    const {
+      contractFilename,
+      amount,
+      functionName,
+      stateMutability,
+      type,
+      params,
+    } = req.body
+
+    if (
+      !contractFilename ||
+      amount < 0 ||
+      !functionName ||
+      !params ||
+      !stateMutability ||
+      !type
+    ) {
+      throw new Error(
+        'Unable to execute transaction, please provide correct parameters',
+      )
+    }
+
+    let iface = new ethers.utils.Interface(
+      Object.values(contracts[contractFilename]['currentVersion']['abis']).flat(
+        1,
+      ),
+    )
+    const functionEncodedSignature = iface.encodeFunctionData(functionName, [
+      ...params.map((param) => param[0]),
+    ])
+
+    if (stateMutability === 'view' || stateMutability === 'pure') {
+      let paramData = {
+        from: wallet.address,
+        to:
+          contracts[contractFilename]['currentVersion']['contract']['address'],
+        data: functionEncodedSignature,
+      }
+
+      const txRes = await callTransaction(paramData)
+      let functionRes = iface.decodeFunctionResult(
+        `${functionName}()`,
+        txRes.result,
+      )
+
+      functionRes = functionRes.map((val) => val.toString())
+
+      return res.status(200).send({ output: functionRes })
+    } else {
+      let paramData = {
+        from: wallet.address,
+        to:
+          contracts[contractFilename]['currentVersion']['contract']['address'],
+        value: amount ? amount : '0x0',
+        data: functionEncodedSignature,
+      }
+
+      const txRes = await sendTransaction(paramData)
+      const txReceipt = await getTransaction(txRes.result)
+
+      // Store transaction in contract history
+      let txData = {
+        paramData: {
+          functionName: functionName,
+          params: params,
+          stateMutability: stateMutability,
+          type: type,
+          amount: amount,
+          rawData: functionEncodedSignature,
+        },
+        receipt: txReceipt.result,
+      }
+
+      contracts[contractFilename]['currentVersion']['transactions'].push(txData)
+
+      return res.status(200).send(txData)
+    }
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.get('/subscribeToChanges', async (req, res) => {
+  const headers = {
+    'Content-Type': 'text/event-stream',
+    Connection: 'keep-alive',
+    'Cache-Control': 'no-cache',
+  }
+  res.writeHead(200, headers)
+  res.write('data: {"msg": "redeployed"}\n\n')
+
+  client = res
+
+  req.on('close', () => {
+    console.log(`Connection closed`)
+    client = null
+  })
+})
+
+app.get('/getCurrentContract', async (req, res) => {
+  try {
+    const { contractFilename } = req.query
+    if (!contractFilename) {
+      throw new Error('No contract filename provided')
+    }
+    return res.status(200).send({ contract: contracts[contractFilename] })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.get('/getTransactions', async (req, res) => {
+  try {
+    const { contractFilename } = req.query
+    if (!contractFilename) {
+      throw new Error('No contract filename provided')
+    }
+    return res.status(200).send({
+      contract: contracts[contractFilename]['currentVersion']['transactions'],
+    })
+  } catch (e) {
+    return res.status(500).send({ error: e.message })
+  }
+})
+
+app.listen(PORT)
+
+function createNewContract(filename, abis, contract) {
+  let res = {
+    contract: contract,
+    abis: abis,
+    hasConstructor: hasConstructor(abis),
+    transactions: [],
+  }
+
+  return res
+}
+
+async function sendTransaction(params) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_sendTransaction',
+        params: [params],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to send tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
+
+async function callTransaction(params) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_call',
+        params: [params],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to send tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
+
+async function getTransaction(txHash) {
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'eth_getTransactionReceipt',
+        params: [txHash],
+        id: 1,
+      }),
+    })
+
+    if (txRes.status === 200) {
+      return await txRes.json()
+    } else {
+      throw new Error('Unable to get tx')
+    }
+  } catch (e) {
+    throw new Error(e.message)
+  }
+}
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
@@ -45,19 +329,15 @@ function getSolidityFiles() {
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
+
+    if (!(basename in contracts)) {
+      contracts[basename] = {
+        currentVersion: {},
+        historicalChanges: [],
+      }
+    }
   })
 }
-
-app.get('/solidityFiles', async (req, res) => {
-  try {
-    getSolidityFiles()
-
-    return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
-  } catch (e) {
-    console.log('error: ', e)
-    return res.status(500).send({ error: e.message })
-  }
-})
 
 function getAllFiles(dirPath, arrayOfFiles) {
   let files = fs.readdirSync(dirPath)
@@ -86,184 +366,6 @@ function getAllFiles(dirPath, arrayOfFiles) {
   return arrayOfFiles
 }
 
-app.post('/deployContract', async (req, res) => {
-  try {
-    const { abi, bytecode, constructor } = req.body
-
-    let [factory, contract] = await deployContracts(abi, bytecode, constructor)
-
-    globalContract = contract
-
-    return res.status(200).send({ message: 'Contract Deployed' })
-  } catch (e) {
-    console.log('Contract deployment error: ', e)
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/abi', async (req, res) => {
-  const { contractName } = req.query
-
-  try {
-    let [abis, bytecode] = await compileContract(contractName)
-    globalAbis = abis
-    return res.status(200).send({ abi: globalAbis, bytecode: bytecode })
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/balances', async (req, res) => {
-  try {
-    const ether_balance = await checkEtherBalance(provider, wallet.address)
-
-    let balances = {
-      eth: ether_balance,
-    }
-
-    res.status(200).send(balances)
-  } catch (e) {
-    console.error(e.message)
-    res.status(500).send({ error: e.message })
-  }
-})
-
-app.post('/executeTransaction', async (req, res) => {
-  const { functionName, params, stateMutability, amount } = req.body
-
-  try {
-    if (
-      stateMutability === 'view' ||
-      stateMutability === 'pure' ||
-      stateMutability === 'nonpayable' ||
-      stateMutability === 'payable'
-    ) {
-      // Need to just call the function
-      let callFunctionString = 'globalContract.functions.' + functionName + '('
-
-      // param[0] === value
-      // param[1] === type
-      for (let paramIndex = 0; paramIndex < params.length; paramIndex++) {
-        // If it's a string, add quotation marks
-        if (
-          params[paramIndex][1] === 'string' ||
-          params[paramIndex][1] === 'address'
-        ) {
-          callFunctionString += "'" + params[paramIndex][0] + "'"
-        }
-        // If not a string, no need for quotation marks
-        else callFunctionString += params[paramIndex][0]
-
-        // Add commas if there are multiple params
-        if (paramIndex < params.length - 1) {
-          callFunctionString += ','
-        }
-      }
-
-      // payable functions
-      if (stateMutability === 'payable' && amount > 0) {
-        callFunctionString += `${
-          params.length === 0 ? '' : ','
-        }{value: ethers.utils.parseEther("${amount}")}`
-      }
-
-      callFunctionString += ')'
-
-      const functionResult = await eval(callFunctionString)
-
-      if (stateMutability === 'nonpayable' || stateMutability === 'payable') {
-        historicalTransactions.unshift({
-          res: functionResult,
-          functionName: functionName,
-          params: params,
-          stateMutability: stateMutability,
-        })
-      }
-
-      return res.send({
-        result: functionResult[0] ? functionResult[0].toString() : '',
-      })
-    }
-    else { 
-      console.log('none of the above');
-    }
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/subscribeToChanges', async (req, res) => {
-  const headers = {
-    'Content-Type': 'text/event-stream',
-    Connection: 'keep-alive',
-    'Cache-Control': 'no-cache',
-  }
-  res.writeHead(200, headers)
-  res.write('data: {"msg": "redeployed"}\n\n')
-
-  client = res
-
-  req.on('close', () => {
-    // console.log(`Connection closed`)
-    client = null
-  })
-})
-
-app.post('/test', (req, res) => {
-  refreshFrontend()
-  res.send(200)
-})
-
-app.get('/getHistoricalTransactions', async (req, res) => {
-  try {
-    return res
-      .status(200)
-      .send({ historicalTransactions: historicalTransactions })
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/currentContractAddress', (req, res) => {
-  try {
-    return res.status(200).send({ address: globalContract['address'] })
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.listen(PORT)
-
-async function compileSpecificSolVersion(input, version) {
-  return new Promise(async (resolve, reject) => {
-    await solc.loadRemoteVersion(version, function (err, solcSnapshot) {
-      if (err) {
-        console.log('\n\n\nERROR!!!! loading remote version: ' + err + '\n\n\n')
-        reject(err)
-      } else {
-        let output = JSON.parse(
-          solcSnapshot.compile(JSON.stringify(input), { import: findImports }),
-        )
-        resolve(output)
-      }
-    })
-  })
-}
-
-// Simply loop through solidity versions and pick the earliest version that is valid for the solc version specified in the contract
-// Reason I did earliest version: some solc versions, like pragma solidity >0.5.1, will allow for 0.8.0 even if 0.8.0 contains non backward-compatible breaking changes
-async function pickValidSolcVersion(contractSolcVersion) {
-  // TODO: Probably should just cache this locally instead of making this API call (slow) so often
-  const res = await fetch('https://binaries.soliditylang.org/bin/list.json')
-  const parsedRes = await res.json()
-
-  const validVersion = parsedRes['builds'].find((item) =>
-    semver.satisfies(item['longVersion'], contractSolcVersion),
-  )
-
-  return 'v' + validVersion['longVersion']
-}
-
 async function compileContract(file) {
   try {
     if (JSON.stringify(solidityFileDirMappings) === '{}') getSolidityFiles()
@@ -287,19 +389,8 @@ async function compileContract(file) {
         },
       },
     }
-    let output
 
-    // Find specific solc version (slow, so commented out for now)
-    // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
-    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang';
-
-    // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
-    // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
-    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion);
-    //   output = await compileSpecificSolVersion(input, validSolcVersion);
-    // }
-
-    output = JSON.parse(
+    let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
 
@@ -325,7 +416,8 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    console.log('error compiling: ', e); 
+    //restart solc
+    execSync('solc')
     throw new Error(e.message)
   }
 }
@@ -366,7 +458,6 @@ async function checkEtherBalance(provider, address) {
     const balanceInEther = ethers.utils.formatEther(balance)
     return balanceInEther
   } catch (e) {
-    console.log('error getting balance: ', e)
     throw new Error(e.message)
   }
 }
@@ -409,6 +500,14 @@ function sendErrorToFrontend(errorMessage) {
   client.write(`data: {"error": "${errorMessage}"}\n\n`)
 }
 
+function hasConstructor(abis) {
+  return (
+    Object.values(abis)
+      .flat(2)
+      .filter((curr) => curr.type === 'constructor').length > 0
+  )
+}
+
 chokidar
   .watch(`${userRealDirectory}/**/*.sol`, {
     persistent: true,
@@ -417,20 +516,35 @@ chokidar
   .on('all', async (event, filePath) => {
     if (event === 'change') {
       try {
-        // console.log('Detected update for: ', filePath)
+        // NOTE: COMPILE CONTRACT BREAKS B/C OF SOLC
+        console.log(`Changes found in ${filePath}, redeploying contract`)
 
-        // If changes are made to sol file, redeploy that file
-        let [abis, bytecode] = await compileContract(path.basename(filePath))
-        let [factory, contract] = await deployContracts(abis, bytecode, [])
+        let fileBasename = path.basename(filePath)
+        let [abis, bytecode] = await compileContract(fileBasename)
 
-        console.log(`\nRedeployed contract ${filePath}\n`);
+        if (hasConstructor(abis)) {
+          contracts[fileBasename]['historicalChanges'].push(
+            contracts[fileBasename]['currentVersion'],
+          )
+          contracts[fileBasename]['currentVersion'] = createNewContract(
+            filePath,
+            abis,
+            {},
+          )
+        } else {
+          let [factory, contract] = await deployContracts(abis, bytecode, [])
+          contracts[fileBasename]['historicalChanges'].push(
+            contracts[fileBasename]['currentVersion'],
+          )
+          contracts[fileBasename]['currentVersion'] = createNewContract(
+            filePath,
+            abis,
+            contract,
+          )
+        }
 
-        globalContract = contract
-        globalAbis = abis
-
-        refreshFrontend()
+        return refreshFrontend()
       } catch (e) {
-        // send error to frontend
         sendErrorToFrontend(e.message)
       }
     }

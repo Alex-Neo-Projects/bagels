@@ -7,16 +7,19 @@ import { InputBox } from './InputBox'
 export function TextInputs({
   val,
   idxOne,
+  contract,
+  hasConstructor,
   getBalance,
   deployContract,
-  getHistoricalTransactions,
+  contractFilename,
+  getContract,
 }) {
   const [inputs, setInputs] = useState([])
   const [amount, setAmount] = useState(0)
   const [executingTransaction, setExecutingTransaction] = useState(false)
-  const [executionError, setExecutionError] = useState()
-  const [output, setOutput] = useState()
-  const [error, setError] = useState()
+  const [executionError, setExecutionError] = useState(null)
+  const [output, setOutput] = useState(null)
+  const [error, setError] = useState(null)
 
   // Update fees when a trasaction gets executed
   useEffect(() => {
@@ -182,10 +185,7 @@ export function TextInputs({
             // Execute transaction
             setExecutingTransaction(true)
 
-            let name = val.name
-
             if (val.type === 'constructor') {
-              name = 'constructor'
               await deployContract(inputs)
               return
             }
@@ -196,6 +196,7 @@ export function TextInputs({
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
+                contractFilename: contractFilename,
                 functionName: val.name,
                 params: inputs,
                 stateMutability: val.stateMutability,
@@ -205,13 +206,9 @@ export function TextInputs({
             })
 
             const jsonParsed = await res.json()
-
             if (res.status === 200) {
-              let showOutput = jsonParsed['result']
-                ? `${jsonParsed['result']}`
-                : 'Transaction successful.'
-              setOutput(showOutput)
-              getHistoricalTransactions()
+              setOutput(jsonParsed['output'] || ' ')
+              getContract()
             } else if (res.status === 500) {
               setExecutionError(JSON.stringify(jsonParsed['error']))
             }
@@ -238,16 +235,28 @@ export function TextInputs({
       </div>
 
       {output && (
-        <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
-          <div className="flex w-full bg-[#dbdbdb28] border rounded-lg p-2 text-sm">
-            <p className="text-sm">{output}</p>
-          </div>
+        <div className="flex flex-col pt-4 space-y-4 w-full">
+          <p className="text-md font-bold">Transaction Successful</p>
+          {(val.stateMutability === 'view' ||
+            val.stateMutability === 'pure') && (
+            <div className="flex flex-row justify-start items-center space-x-4 w-full">
+              <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
+                {output.map((res, idx) => {
+                  return (
+                    <p key={idx.toString()} className="text-sm">
+                      {res}
+                    </p>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {error && (
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
-          <p className="text-md font-bold">Error</p>
+          <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
             <p className="text-sm">{error}</p>
           </div>
@@ -256,7 +265,7 @@ export function TextInputs({
 
       {executionError && (
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full overflow-hidden break-all">
-          <p className="text-md font-bold">Error</p>
+          <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
             <p className="text-sm">{executionError}</p>
           </div>
