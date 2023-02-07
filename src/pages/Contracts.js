@@ -177,7 +177,6 @@ export default function Contracts({ contractFilename }) {
       )
 
       const contractResParsed = await contractRes.json()
-      console.log('get contract: ', contractResParsed)
 
       if (contractRes.status === 200) {
         setTransactions(
