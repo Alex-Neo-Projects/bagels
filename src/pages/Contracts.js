@@ -78,16 +78,17 @@ export default function Contracts({ contractFilename }) {
 
     try {
       await getBalance()
-      await getContract()
+      const contract = await getContract()
 
       const { returnedAbi } = await getABI()
 
       let hasConstructor =
         Object.values(returnedAbi)
           .flat(2)
-          .filter((curr) => curr.type === 'constructor').length > 0
+          .filter((curr) => curr.type === 'constructor')?.length > 0
+      let hasDeployed = contract['historicalChanges']?.length > 0
 
-      if (hasConstructor) {
+      if (hasConstructor && !hasDeployed) {
         setHasConstructor(true)
         return
       }
@@ -176,6 +177,7 @@ export default function Contracts({ contractFilename }) {
       )
 
       const contractResParsed = await contractRes.json()
+      console.log('get contract: ', contractResParsed)
 
       if (contractRes.status === 200) {
         setTransactions(
@@ -184,6 +186,8 @@ export default function Contracts({ contractFilename }) {
             ? []
             : contractResParsed['contract']['currentVersion']['transactions'],
         )
+
+        return contractResParsed['contract']
       } else {
         throw new Error('Unable to fetch contract')
       }
@@ -412,7 +416,9 @@ export default function Contracts({ contractFilename }) {
                               filteredTransactionsLength={
                                 transactions.filter(
                                   (transaction) =>
-                                     ethers.utils.getAddress(transaction.receipt.to) === contractAddress,
+                                    ethers.utils.getAddress(
+                                      transaction.receipt.to,
+                                    ) === contractAddress,
                                 ).length
                               }
                             />
