@@ -17,6 +17,7 @@ import {
   buttonBackgroundColor,
 } from '../theme'
 import { Transaction } from '../components/Transaction'
+import { ethers } from 'ethers'
 
 export default function Contracts({ contractFilename }) {
   const [contract, setContract] = useState(null)
@@ -36,8 +37,8 @@ export default function Contracts({ contractFilename }) {
 
   const [error, setError] = useState(null)
 
-  // const filteredTransactions = transactions.filter((transaction, _) => {
-  //   return transaction.res.to === contractAddress
+  // const filteredTransactions = transactions.filter((transaction) => {
+  //   return transaction.receipt.to === contractAddress
   // })
 
   useEffect(() => {
@@ -134,12 +135,10 @@ export default function Contracts({ contractFilename }) {
     })
 
     const deploymentParsed = await deployment.json()
-    console.log(deploymentParsed)
 
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error)
     } else {
-      console.log(deploymentParsed['contract']['contract']['address'])
       setContractAddress(deploymentParsed['contract']['contract']['address'])
       setContract(deploymentParsed['contract'])
     }
@@ -189,7 +188,10 @@ export default function Contracts({ contractFilename }) {
 
       if (contractRes.status === 200) {
         setTransactions(
-          contractResParsed['contract']['currentVersion']['transactions'],
+          contractResParsed['contract']['currentVersion']['transactions'] ===
+            undefined
+            ? []
+            : contractResParsed['contract']['currentVersion']['transactions'],
         )
       } else {
         throw new Error('Unable to fetch contract')
@@ -403,17 +405,24 @@ export default function Contracts({ contractFilename }) {
                   <div className="flex flex-col space-y-2">
                     {transactions?.length > 0 ? (
                       transactions
-                        .filter(
-                          (transaction) =>
-                            transaction.res.to === contractAddress,
-                        )
+                        .slice()
+                        .reverse()
+                        .filter((transaction) => {
+                          return (
+                            ethers.utils.getAddress(transaction.receipt.to) ===
+                            contractAddress
+                          )
+                        })
                         .map((val, idx) => {
                           return (
                             <Transaction
                               val={val}
                               idx={idx}
                               filteredTransactionsLength={
-                                filteredTransactions.length
+                                transactions.filter(
+                                  (transaction) =>
+                                     ethers.utils.getAddress(transaction.receipt.to) === contractAddress,
+                                ).length
                               }
                             />
                           )

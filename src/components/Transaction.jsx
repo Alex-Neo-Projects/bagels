@@ -15,7 +15,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
         </p>
       </div>
 
-      <div className="flex flex-col space-y-4">
+     <div className="flex flex-col space-y-4">
         <div className="flex flex-col space-y-4">
           <div className="flex flex-col space-y-1">
             <p className="text-md font-bold">
@@ -23,9 +23,9 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
             </p>
             <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
               <p className="text-sm">
-                {val.functionName}(
-                {val.params.length > 0 ? '' : ' '}){' '}
-                {val.stateMutability}
+                {val.paramData.functionName}(
+                {val.paramData.params.length > 0 ? '' : ' '}){' '}
+                {val.paramData.stateMutability}
               </p>
             </div>
           </div>
@@ -36,7 +36,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
             </p>
 
             <div className="space-y-6">
-              {val.params.map((param, paramsVal) => {
+              {val.paramData.params.map((param, paramsVal) => {
                 return (
                   <div className="pl-2 space-y-2">
                     <div className="flex flex-row space-x-4 justify-center items-center">
@@ -91,7 +91,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
             <p className="text-md font-bold">Hash</p>
             <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
               <p className="text-sm">
-                {val.res.hash}
+                {val.receipt.transactionHash}
               </p>
             </div>
           </div>
@@ -99,7 +99,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
           <div className="flex flex-col space-y-1">
             <p className="text-md font-bold">To</p>
             <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
-              <p className="text-sm">{val.res.to}</p>
+              <p className="text-sm">{val.receipt.to}</p>
             </div>
           </div>
 
@@ -107,7 +107,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
             <p className="text-md font-bold">From</p>
             <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
               <p className="text-sm">
-                {val.res.from}
+                {val.receipt.from}
               </p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export function Transaction({val, idx, filteredTransactionsLength}) {
             </p>
             <div className="rounded-lg bg-[#93939328] border border-[#93939328] pl-3 pr-3 p-4">
               <p className="test-sm">
-                {val.res.data}
+                {val.paramData.rawData}
               </p>
             </div>
           </div>

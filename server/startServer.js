@@ -6,7 +6,6 @@ import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
 import fetch from 'node-fetch'
-import { execSync } from 'child_process'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -151,7 +150,7 @@ app.post('/executeTransaction', async (req, res) => {
 
       const txRes = await callTransaction(paramData)
       let functionRes = iface.decodeFunctionResult(
-        `${functionName}()`,
+        functionName,
         txRes.result,
       )
 
