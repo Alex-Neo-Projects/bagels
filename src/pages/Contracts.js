@@ -28,18 +28,10 @@ export default function Contracts({ contractFilename }) {
   const [contractAddress, setContractAddress] = useState(null)
 
   const [transactions, setTransactions] = useState([])
-
   const [contractNameState, setContractNameState] = useState(null)
 
   const [listening, setListening] = useState(false)
-
-  const [forceTextInputReset, setNewForceTextInputResetVal] = useState(0)
-
   const [error, setError] = useState(null)
-
-  // const filteredTransactions = transactions.filter((transaction) => {
-  //   return transaction.receipt.to === contractAddress
-  // })
 
   useEffect(() => {
     if (!listening) {
@@ -54,7 +46,6 @@ export default function Contracts({ contractFilename }) {
               case 'redeployed': {
                 clear()
                 await init()
-                // setNewForceTextInputResetVal(Math.random());
                 break
               }
               case error: {

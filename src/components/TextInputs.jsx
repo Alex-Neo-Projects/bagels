@@ -138,6 +138,8 @@ export function TextInputs({
     setExecutionError()
   }
 
+  console.log(val)
+
   return (
     <div
       className="flex flex-col justify-between items-start space-y-1 h-full "
@@ -145,93 +147,101 @@ export function TextInputs({
     >
       <div className="flex justify-end w-full items-center space-x-4">
         {/* Check for val.inputs since certain types don't have an inputs field: i.e., fallback(), receive()  */}
-        {val.inputs && val.inputs.map((param, idx) => {
-          return (
-            <InputBox 
-              inputType={'text'}
-              inputPlaceholder={`${param.name} (${param.type})`}
-              onInputFunction={handleInputListChange.bind(this, [idx, param.type])} 
-            />
-          )
-        })}
+        {val.inputs &&
+          val.type !== 'event' &&
+          val.inputs.map((param, idx) => {
+            return (
+              <InputBox
+                inputType={'text'}
+                inputPlaceholder={`${param.name} (${param.type})`}
+                onInputFunction={handleInputListChange.bind(this, [
+                  idx,
+                  param.type,
+                ])}
+              />
+            )
+          })}
 
         {val.stateMutability === 'payable' && (
-          <InputBox 
-            inputType={'text'} 
-            inputPlaceholder={'Enter amount'} 
+          <InputBox
+            inputType={'text'}
+            inputPlaceholder={'Enter amount'}
             onInputFunction={(e) => setAmount(parseFloat(e.target.value))}
           />
         )}
 
-        <button
-          className={
-            // If there's an input, show the input and the button on the same line.
-            // If there's no input, make the button fill up the full line
-            (val.inputs && val.inputs.length > 0) || val.stateMutability === 'payable'
-              ? `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
-              : `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
-          }
-          onClick={async () => {
-            // Clear outputs and errors
-            clear()
-
-            // Validation goes here
-            const inputIsValid = validateInputs()
-
-            if (val.inputs.length > 0 && !inputIsValid) {
-              return
+        {val.type !== 'event' && (
+          <button
+            className={
+              // If there's an input, show the input and the button on the same line.
+              // If there's no input, make the button fill up the full line
+              (val.inputs && val.inputs.length > 0) ||
+              val.stateMutability === 'payable'
+                ? `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
+                : `text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-full h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`
             }
+            onClick={async () => {
+              // Clear outputs and errors
+              clear()
 
-            // Execute transaction
-            setExecutingTransaction(true)
+              // Validation goes here
+              const inputIsValid = validateInputs()
 
-            if (val.type === 'constructor') {
-              await deployContract(inputs)
-              return
-            }
+              if (val.inputs.length > 0 && !inputIsValid) {
+                return
+              }
 
-            const res = await fetch(`${SERVER_URL}/executeTransaction`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                contractFilename: contractFilename,
-                functionName: val.name,
-                params: inputs,
-                stateMutability: val.stateMutability,
-                type: val.type,
-                amount: amount,
-              }),
-            })
+              // Execute transaction
+              setExecutingTransaction(true)
 
-            const jsonParsed = await res.json()
-            if (res.status === 200) {
-              setOutput(jsonParsed['output'] || ' ')
-              getContract()
-            } else if (res.status === 500) {
-              setExecutionError(JSON.stringify(jsonParsed['error']))
-            }
+              if (val.type === 'constructor') {
+                await deployContract(inputs)
+                return
+              }
 
-            setTimeout(() => {
-              setExecutingTransaction(false)
-            }, 200)
-          }}
-          disabled={executingTransaction}
-        >
-          <div className="flex flex-row justify-center w-full items-center text-md font-bold">
-            {executingTransaction ? (
-              <div className="flex flex-row justify-center items-center">
-                <p>Loading...</p>
-              </div>
-            ) : val.stateMutability === 'view' ||
-              val.stateMutability === 'pure' ? (
-              <p>Read</p>
-            ) : (
-              <p>Write</p>
-            )}
-          </div>
-        </button>
+              const res = await fetch(`${SERVER_URL}/executeTransaction`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  contractFilename: contractFilename,
+                  functionName: val.name,
+                  params: inputs,
+                  stateMutability: val.stateMutability,
+                  type: val.type,
+                  amount: amount,
+                }),
+              })
+
+              const jsonParsed = await res.json()
+              if (res.status === 200) {
+                setOutput(jsonParsed['output'] || ' ')
+                getContract()
+              } else if (res.status === 500) {
+                setExecutionError(JSON.stringify(jsonParsed['error']))
+              }
+
+              setTimeout(() => {
+                setExecutingTransaction(false)
+              }, 200)
+            }}
+            disabled={executingTransaction}
+          >
+            <div className="flex flex-row justify-center w-full items-center text-md font-bold">
+              {executingTransaction ? (
+                <div className="flex flex-row justify-center items-center">
+                  <p>Loading...</p>
+                </div>
+              ) : val.stateMutability === 'view' ||
+                val.stateMutability === 'pure' ? (
+                <p>Read</p>
+              ) : (
+                <p>Write</p>
+              )}
+            </div>
+          </button>
+        )}
       </div>
 
       {output && (
