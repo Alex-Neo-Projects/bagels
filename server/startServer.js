@@ -1,11 +1,10 @@
-import fs, { stat } from 'fs'
+import fs from 'fs'
 import solc from 'solc'
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
-import semver from 'semver'
 import fetch from 'node-fetch'
 import { execSync } from 'child_process'
 
@@ -391,16 +390,6 @@ async function compileContract(file) {
       },
     }
 
-    // Find specific solc version (slow, so commented out for now)
-    // const installedSolcVersion = execSync('solcjs --version').toString().split('+')[0];
-    // const installedSolcVersion = '0.8.17+commit.8df45f5f.Emscripten.clang';
-
-    // const contractSolcVersion = getSolcVersionFromContract(fileAsString);
-    // if (!semver.satisfies(installedSolcVersion, contractSolcVersion)) {
-    //   const validSolcVersion = await pickValidSolcVersion(contractSolcVersion);
-    //   output = await compileSpecificSolVersion(input, validSolcVersion);
-    // }
-
     let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
     )
@@ -529,6 +518,7 @@ chokidar
       try {
         // NOTE: COMPILE CONTRACT BREAKS B/C OF SOLC
         console.log(`Changes found in ${filePath}, redeploying contract`)
+
         let fileBasename = path.basename(filePath)
         let [abis, bytecode] = await compileContract(fileBasename)
 
@@ -555,7 +545,6 @@ chokidar
 
         return refreshFrontend()
       } catch (e) {
-        // send error to frontend
         sendErrorToFrontend(e.message)
       }
     }
