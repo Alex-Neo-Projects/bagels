@@ -6,6 +6,7 @@ import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
 import fetch from 'node-fetch'
+import linker from 'solc/linker.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -56,10 +57,8 @@ app.post('/deployContract', async (req, res) => {
     if (firstDeploy) {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
-      console.log('here is the bytecode: ', byteCodes); 
-      
       let tempContract
-      if (constructor) {
+      if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(
           abis,
           byteCodes,
@@ -70,7 +69,6 @@ app.post('/deployContract', async (req, res) => {
         let [factory, contract] = await deployContracts(abis, byteCodes, [])
         tempContract = contract
       }
-
       const contract = createNewContract(contractFilename, abis, tempContract)
 
       contracts[contractFilename]['historicalChanges'].push(
@@ -92,10 +90,8 @@ app.get('/abi', async (req, res) => {
   try {
     const { contractName } = req.query
     let [abis, bytecode] = await compileContract(contractName)
-    console.log(abis, bytecode)
     return res.status(200).send({ abi: abis, bytecode: bytecode })
   } catch (e) {
-    console.log("LINE 98: error abi")
     return res.status(500).send({ error: e.message })
   }
 })
@@ -426,7 +422,6 @@ async function compileContract(file) {
 async function deployContracts(abis, bytecodes, constructor) {
   let abi = Object.values(abis)[0]
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
-
   let deploymentString = 'factory.deploy('
 
   for (
@@ -445,7 +440,6 @@ async function deployContracts(abis, bytecodes, constructor) {
       deploymentString += ','
     }
   }
-
   deploymentString += ')'
 
   const contract = await eval(deploymentString)
