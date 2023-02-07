@@ -56,6 +56,8 @@ app.post('/deployContract', async (req, res) => {
     if (firstDeploy) {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
+      console.log('here is the bytecode: ', byteCodes); 
+      
       let tempContract
       if (constructor) {
         let [factory, contract] = await deployContracts(
@@ -90,8 +92,10 @@ app.get('/abi', async (req, res) => {
   try {
     const { contractName } = req.query
     let [abis, bytecode] = await compileContract(contractName)
+    console.log(abis, bytecode)
     return res.status(200).send({ abi: abis, bytecode: bytecode })
   } catch (e) {
+    console.log("LINE 98: error abi")
     return res.status(500).send({ error: e.message })
   }
 })
