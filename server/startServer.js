@@ -6,9 +6,9 @@ import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
 import fetch from 'node-fetch'
-import linker from 'solc/linker.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
+// hardcoded private key from one of the anvil wallets
 const wallet = new ethers.Wallet(
   '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
   provider,
@@ -31,7 +31,7 @@ let solidityFileDirMappings = {}
 let contracts = {}
 
 app.get('/', (req, res) => {
-  res.send('Debugging the contract')
+  res.send('Welcome to the bagels API')
 })
 
 app.get('/solidityFiles', async (req, res) => {
@@ -235,7 +235,9 @@ app.get('/getTransactions', async (req, res) => {
   }
 })
 
-app.listen(PORT)
+// Note: do not delete this, the console.log is needed by spawnBackend.js
+// because this is the signal that the server is up and running!
+app.listen(PORT, () => console.log('server started and listening for requests'))
 
 function createNewContract(filename, abis, contract) {
   let res = {

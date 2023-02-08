@@ -17,13 +17,24 @@ export function startupAnvil(network = '') {
     ]
   }
 
-  const res = spawn('./anvil', args, {
-    cwd: anvilDir,
-    shell: true,
-    stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
+  const nodeProcess = spawn('./anvil', args, { cwd: anvilDir})
+
+  nodeProcess.stdout.on('data', (data) => {
+    parentPort.postMessage('started')
   })
 
-  return res
+  nodeProcess.stderr.on('data', (data) => {
+    if (data.toString().includes('Address already in use')) {
+      console.error('Error starting the local network\n')
+      console.log('There is already a process on port 8545\n')
+      console.log('to kill the process, run: `lsof -i tcp:8545`\n')
+      console.log('then run: `kill {port}` with the port printed from the above command\n')
+    } else {
+      console.error('Error starting the local network: ', data.toString()); 
+    }
+  });
+
+  return nodeProcess
 }
 
 export function killAnvil() {
