@@ -74,8 +74,6 @@ export default function Contracts({ contractFilename }) {
   }
 
   async function init() {
-    console.log('Running init again')
-
     try {
       await getBalance()
       const contract = await getContract()

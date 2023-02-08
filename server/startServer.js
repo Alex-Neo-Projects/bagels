@@ -157,7 +157,6 @@ app.post('/executeTransaction', async (req, res) => {
 
     // Need to use eth_call RPC function for view only functions
     if (stateMutability === 'pure' || stateMutability === 'view' || stateMutability === 'constant') {
-      console.log('calling call contract: ');
       txRes = await callContractFunction(paramData)
 
       // No tx receipt returned by eth_call since it's not modifying state.
@@ -173,8 +172,6 @@ app.post('/executeTransaction', async (req, res) => {
     // If it's a write function, we need to use the send_transaction RPC call
     else {
       txRes = await sendTransaction(paramData)
-
-      console.log('send tx with these values: ', paramData); 
 
       txReceipt = await getTransaction(txRes.result)
 
@@ -424,27 +421,34 @@ async function deployContracts(abis, bytecodes, constructor) {
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
   let deploymentString = 'factory.deploy('
 
-  for (
-    var currentIndex = 0;
-    currentIndex < constructor.length;
-    currentIndex++
-  ) {
-    let param = constructor[currentIndex][0]
-    let type = constructor[currentIndex][1]
-
-    if (type === 'string') deploymentString += "'" + param + "'"
-    else deploymentString += param
-
-    // Add commas if there are multiple params
-    if (currentIndex < constructor.length) {
-      deploymentString += ','
+  try { 
+    for (
+      var currentIndex = 0;
+      currentIndex < constructor.length;
+      currentIndex++
+    ) {
+      let param = constructor[currentIndex][0]
+      let type = constructor[currentIndex][1]
+  
+      if (type === 'string') deploymentString += "'" + param + "'"
+      else deploymentString += param
+  
+      // Add commas if there are multiple params
+      if (currentIndex < constructor.length) {
+        deploymentString += ','
+      }
     }
+    deploymentString += ')'
+  
+    const contract = await eval(deploymentString)
+  
+    return [factory, contract]
+  } catch (e) { 
+    // console.log('deployment error: ');
+    // console.log(e);
+
+    return [null, null];
   }
-  deploymentString += ')'
-
-  const contract = await eval(deploymentString)
-
-  return [factory, contract]
 }
 
 async function checkEtherBalance(provider, address) {
@@ -499,6 +503,8 @@ function sendErrorToFrontend(errorMessage) {
 }
 
 function hasConstructor(abis) {
+  if (!abis) return null;
+
   return (
     Object.values(abis)
       .flat(2)
@@ -516,7 +522,14 @@ chokidar
       console.log(`Changes found in ${filePath}, redeploying contract`)
 
       let fileBasename = path.basename(filePath)
-      let [abis, bytecode] = await compileContract(fileBasename)
+
+      let abis;
+      let bytecode;
+      try { 
+        [abis, bytecode] = await compileContract(fileBasename)
+      } catch (e) {
+        // It will send an error to the frontend b/c of the compiler error, no need to do more here. 
+      }
 
       let tempContract = null
       if (!hasConstructor(abis)) {
@@ -524,14 +537,16 @@ chokidar
         tempContract = contract
       }
 
-      contracts[fileBasename]['historicalChanges'].push(
-        contracts[fileBasename]['currentVersion'],
-      )
-      contracts[fileBasename]['currentVersion'] = createNewContract(
-        filePath,
-        abis,
-        tempContract === null ? {} : tempContract,
-      )
+      // console.log('contracts value: ', contracts);
+
+      // contracts[fileBasename]['historicalChanges'].push(
+      //   contracts[fileBasename]['currentVersion'],
+      // )
+      // contracts[fileBasename]['currentVersion'] = createNewContract(
+      //   filePath,
+      //   abis,
+      //   tempContract === null ? {} : tempContract,
+      // )
       return refreshFrontend()
     }
   })
