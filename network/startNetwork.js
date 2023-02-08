@@ -53,7 +53,7 @@ async function main() {
     children.push(uiWorker)
 
     // Start Local Host
-    open('http://localhost:9091')
+    open('http://localhost:9091/')
   } catch (e) {
     console.error(e)
     process.exit(1)

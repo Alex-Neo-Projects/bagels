@@ -37,6 +37,7 @@ app.get('/', (req, res) => {
 app.get('/solidityFiles', async (req, res) => {
   try {
     getSolidityFiles()
+
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
     return res.status(500).send({ error: e.message })
@@ -324,7 +325,7 @@ async function getTransaction(txHash) {
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
-
+  // console.log('filesReturned: ', filesReturned.length)
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
