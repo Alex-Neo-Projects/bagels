@@ -52,8 +52,14 @@ app.post('/deployContract', async (req, res) => {
       throw new Error('Cannot deploy contract, no filename provided')
     }
 
-    let firstDeploy =
-      contracts[contractFilename]['historicalChanges'].length === 0
+    let firstDeploy = false;
+
+    // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
+    if (contracts[contractFilename]) {
+      if (contracts[contractFilename]['historicalChanges'].length === 0) {
+        firstDeploy = true;
+      }
+    }
 
     if (firstDeploy) {
       const [abis, byteCodes] = await compileContract(contractFilename)
@@ -322,6 +328,7 @@ async function getTransaction(txHash) {
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
+
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
@@ -440,12 +447,7 @@ async function deployContracts(abis, bytecodes, constructor) {
     }
     deploymentString += ')'
   
-    // console.log('\n\n\n\nb4 error!!!')
-    // console.log(deploymentString); 
-    
     const contract = await eval(deploymentString)
-    // console.log('\n\n\n\nafter error!!!\n\n\n\n')
-  
     return [factory, contract]
   } catch (e) { 
     console.log('deployment error: ');
@@ -539,18 +541,19 @@ chokidar
       if (!hasConstructor(abis)) {
         let [factory, contract] = await deployContracts(abis, bytecode, [])
         tempContract = contract
+      } else {
+        // TODO: redeploy with constructors.
+        console.log('i guess this doesnt get deployed????'); 
       }
 
-      // console.log('contracts value: ', contracts);
-
-      // contracts[fileBasename]['historicalChanges'].push(
-      //   contracts[fileBasename]['currentVersion'],
-      // )
-      // contracts[fileBasename]['currentVersion'] = createNewContract(
-      //   filePath,
-      //   abis,
-      //   tempContract === null ? {} : tempContract,
-      // )
+      contracts[fileBasename]['historicalChanges'].push(
+        contracts[fileBasename]['currentVersion'],
+      )
+      contracts[fileBasename]['currentVersion'] = createNewContract(
+        filePath,
+        abis,
+        tempContract === null ? {} : tempContract,
+      )
       return refreshFrontend()
     }
   })
