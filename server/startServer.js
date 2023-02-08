@@ -325,7 +325,6 @@ async function getTransaction(txHash) {
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
-  // console.log('filesReturned: ', filesReturned.length)
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
