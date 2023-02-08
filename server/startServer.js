@@ -440,12 +440,16 @@ async function deployContracts(abis, bytecodes, constructor) {
     }
     deploymentString += ')'
   
+    // console.log('\n\n\n\nb4 error!!!')
+    // console.log(deploymentString); 
+    
     const contract = await eval(deploymentString)
+    // console.log('\n\n\n\nafter error!!!\n\n\n\n')
   
     return [factory, contract]
   } catch (e) { 
-    // console.log('deployment error: ');
-    // console.log(e);
+    console.log('deployment error: ');
+    console.log(e);
 
     return [null, null];
   }
