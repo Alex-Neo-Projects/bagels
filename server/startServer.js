@@ -6,6 +6,7 @@ import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
 import fetch from 'node-fetch'
+import linker from 'solc/linker.js'
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 const wallet = new ethers.Wallet(
@@ -36,6 +37,7 @@ app.get('/', (req, res) => {
 app.get('/solidityFiles', async (req, res) => {
   try {
     getSolidityFiles()
+
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
     return res.status(500).send({ error: e.message })
@@ -57,7 +59,7 @@ app.post('/deployContract', async (req, res) => {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
       let tempContract
-      if (constructor) {
+      if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(
           abis,
           byteCodes,
@@ -68,7 +70,6 @@ app.post('/deployContract', async (req, res) => {
         let [factory, contract] = await deployContracts(abis, byteCodes, [])
         tempContract = contract
       }
-
       const contract = createNewContract(contractFilename, abis, tempContract)
 
       contracts[contractFilename]['historicalChanges'].push(
@@ -324,7 +325,6 @@ async function getTransaction(txHash) {
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
-
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
@@ -422,7 +422,6 @@ async function compileContract(file) {
 async function deployContracts(abis, bytecodes, constructor) {
   let abi = Object.values(abis)[0]
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
-
   let deploymentString = 'factory.deploy('
 
   for (
@@ -441,7 +440,6 @@ async function deployContracts(abis, bytecodes, constructor) {
       deploymentString += ','
     }
   }
-
   deploymentString += ')'
 
   const contract = await eval(deploymentString)
