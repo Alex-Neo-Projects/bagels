@@ -24,7 +24,7 @@ export function TextInputs({
   // Update fees when a trasaction gets executed
   useEffect(() => {
     getBalance()
-  }, [])
+  }, [output])
 
   // index[0] === the param value
   // index[1] === the param type
@@ -138,8 +138,6 @@ export function TextInputs({
     setExecutionError()
   }
 
-  console.log(val)
-
   return (
     <div
       className="flex flex-col justify-between items-start space-y-1 h-full "
@@ -165,7 +163,7 @@ export function TextInputs({
         {val.stateMutability === 'payable' && (
           <InputBox
             inputType={'text'}
-            inputPlaceholder={'Enter amount'}
+            inputPlaceholder={'Enter amount (wei)'}
             onInputFunction={(e) => setAmount(parseFloat(e.target.value))}
           />
         )}
@@ -247,20 +245,19 @@ export function TextInputs({
       {output && (
         <div className="flex flex-col pt-4 space-y-4 w-full">
           <p className="text-md font-bold">Transaction Successful</p>
-          {(val.stateMutability === 'view' ||
-            val.stateMutability === 'pure') && (
             <div className="flex flex-row justify-start items-center space-x-4 w-full">
               <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
                 {output.map((res, idx) => {
                   return (
-                    <p key={idx.toString()} className="text-sm">
-                      {res}
-                    </p>
+                    <>
+                      <p key={idx.toString()} className="text-sm">
+                        {res}
+                      </p>
+                    </>
                   )
-                })}
+              })}
               </div>
             </div>
-          )}
         </div>
       )}
 

@@ -141,34 +141,42 @@ app.post('/executeTransaction', async (req, res) => {
       ...params.map((param) => param[0]),
     ])
 
-    if (stateMutability === 'view' || stateMutability === 'pure') {
-      let paramData = {
-        from: wallet.address,
-        to:
-          contracts[contractFilename]['currentVersion']['contract']['address'],
-        data: functionEncodedSignature,
+    let txRes; 
+    let txReceipt; 
+
+    // Convert the value to a hex value since the frontend sends ints
+    let hexAmount = amount ? amount.toString(16) : '0x0'; 
+
+    let paramData =  {
+      from: wallet.address,
+      to:
+        contracts[contractFilename]['currentVersion']['contract']['address'],
+      value: hexAmount,
+      data: functionEncodedSignature,
+    }
+
+    // Need to use eth_call RPC function for view only functions
+    if (stateMutability === 'pure' || stateMutability === 'view' || stateMutability === 'constant') {
+      console.log('calling call contract: ');
+      txRes = await callContractFunction(paramData)
+
+      // No tx receipt returned by eth_call since it's not modifying state.
+      txReceipt = null;
+      
+      // TODO: Fix this later! Should be checking the return type of a function instead!!!
+      if (txRes.result.length === 66 || txRes.result.length === 34) {
+        txRes.result = parseInt(txRes.result, 16);
+      } else {
+        txRes.result = Buffer.from(txRes.result.slice(2), 'hex').toString();
       }
+    } 
+    // If it's a write function, we need to use the send_transaction RPC call
+    else {
+      txRes = await sendTransaction(paramData)
 
-      const txRes = await callTransaction(paramData)
-      let functionRes = iface.decodeFunctionResult(
-        functionName,
-        txRes.result,
-      )
+      console.log('send tx with these values: ', paramData); 
 
-      functionRes = functionRes.map((val) => val.toString())
-
-      return res.status(200).send({ output: functionRes })
-    } else {
-      let paramData = {
-        from: wallet.address,
-        to:
-          contracts[contractFilename]['currentVersion']['contract']['address'],
-        value: amount ? amount : '0x0',
-        data: functionEncodedSignature,
-      }
-
-      const txRes = await sendTransaction(paramData)
-      const txReceipt = await getTransaction(txRes.result)
+      txReceipt = await getTransaction(txRes.result)
 
       // Store transaction in contract history
       let txData = {
@@ -180,13 +188,18 @@ app.post('/executeTransaction', async (req, res) => {
           amount: amount,
           rawData: functionEncodedSignature,
         },
-        receipt: txReceipt.result,
+        receipt: txReceipt ? txReceipt.result : null,
       }
-
+  
       contracts[contractFilename]['currentVersion']['transactions'].push(txData)
-
-      return res.status(200).send(txData)
     }
+
+
+    if (txRes.error) { 
+      return res.status(500).send({error: txRes.error.message})
+    }
+
+    return res.status(200).send({ output: [txRes.result]})
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
@@ -204,7 +217,6 @@ app.get('/subscribeToChanges', async (req, res) => {
   client = res
 
   req.on('close', () => {
-    console.log(`Connection closed`)
     client = null
   })
 })
@@ -216,20 +228,6 @@ app.get('/getCurrentContract', async (req, res) => {
       throw new Error('No contract filename provided')
     }
     return res.status(200).send({ contract: contracts[contractFilename] })
-  } catch (e) {
-    return res.status(500).send({ error: e.message })
-  }
-})
-
-app.get('/getTransactions', async (req, res) => {
-  try {
-    const { contractFilename } = req.query
-    if (!contractFilename) {
-      throw new Error('No contract filename provided')
-    }
-    return res.status(200).send({
-      contract: contracts[contractFilename]['currentVersion']['transactions'],
-    })
   } catch (e) {
     return res.status(500).send({ error: e.message })
   }
@@ -275,7 +273,7 @@ async function sendTransaction(params) {
   }
 }
 
-async function callTransaction(params) {
+async function callContractFunction(params) {
   try {
     const txRes = await fetch(`http://127.0.0.1:8545`, {
       method: 'POST',

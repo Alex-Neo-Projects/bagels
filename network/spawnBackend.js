@@ -11,6 +11,8 @@ async function main() {
   nodeProcess.stdout.on('data', (data) => {
     if (data.toString().includes('server started and listening for requests')) {
       parentPort.postMessage('started')
+    } else { 
+      console.log(data.toString());
     }
   })
 
