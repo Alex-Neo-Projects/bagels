@@ -13,7 +13,6 @@ export default function Home() {
     async function loadBasics() {
       setLoading(true)
       await getSolidityFiles()
-      setLoading(false)
     }
 
     loadBasics()
@@ -29,6 +28,7 @@ export default function Home() {
 
       if (result.status === 200) {
         setSolidityFiles(jsonifiedResult['files'])
+        setLoading(false); 
       } else {
         throw new Error('Unable to get files from local directory')
       }
@@ -64,7 +64,7 @@ export default function Home() {
 
             {loading && (
               <>
-                <LoadingSpinner></LoadingSpinner>
+                <LoadingSpinner />
                 <p className="text-center text-md">
                   If this takes more than a second to load, try refreshing the
                   page!

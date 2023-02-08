@@ -7,13 +7,22 @@ import { getFilepath, getPathDirname } from '../utils.js'
 async function workerPromise(script) {
   return await new Promise((resolve, reject) => {
     let w = new Worker(script, {})
+    let pid; 
+
     w.on('message', (message) => {
-      resolve(message)
+      // This means that the worker is done *starting* 
+      // Necessary to avoid race condition where the backend is slower to start than the frontend
+      // We resolve the PID anyway though, because it's used to kill the process later
+      if (message === 'started') { 
+        resolve(pid)
+      } else {
+        pid = message; 
+      }
     })
     w.on('error', (err) => reject(err))
-    w.on('exit', (exitCode) =>
-      reject(`worker finished with exit code ${exitCode}`),
-    )
+    w.on('exit', (exitCode) => {
+      reject(`worker finished with exit code ${exitCode}`);
+    })
   })
 }
 
@@ -36,6 +45,7 @@ async function main() {
       console.log('Unable to start Anvil')
       process.exit(1)
     }
+
     children.push(anvilWorker)
 
     const backendWorker = await workerPromise(filePaths.backendPath)
@@ -43,6 +53,7 @@ async function main() {
       console.log('Unable to start the backend')
       process.exit(1)
     }
+
     children.push(backendWorker)
 
     const uiWorker = await workerPromise(filePaths.frontendPath)
@@ -61,8 +72,6 @@ async function main() {
 }
 
 process.on('SIGINT', () => {
-  console.log(`\nShutting down ${children.length} services`)
-
   if (children.length >= 1) {
     children.forEach((child) => {
       kill(child, 'SIGTERM')
