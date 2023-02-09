@@ -40,6 +40,8 @@ app.get('/solidityFiles', async (req, res) => {
 
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
+    console.log('error: ', e);
+
     return res.status(500).send({ error: e.message })
   }
 })
@@ -52,10 +54,18 @@ app.post('/deployContract', async (req, res) => {
       throw new Error('Cannot deploy contract, no filename provided')
     }
 
-    let firstDeploy =
-      contracts[contractFilename]['historicalChanges'].length === 0
+    let firstDeploy = false;
+
+    // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
+    if (contracts[contractFilename]) {
+      if (contracts[contractFilename]['historicalChanges'].length === 0) {
+        firstDeploy = true;
+      }
+    }
 
     if (firstDeploy) {
+      console.log('going to do first deploy contract'); 
+
       const [abis, byteCodes] = await compileContract(contractFilename)
 
       let tempContract
@@ -77,12 +87,13 @@ app.post('/deployContract', async (req, res) => {
       )
       contracts[contractFilename]['currentVersion'] = contract
     }
-
+    
     return res.status(200).send({
       message: 'Contract Deployed',
       contract: contracts[contractFilename]['currentVersion'],
     })
   } catch (e) {
+    console.log('deploy')
     return res.status(500).send({ error: e.message })
   }
 })
@@ -104,6 +115,7 @@ app.get('/balances', async (req, res) => {
       eth: ether_balance,
     })
   } catch (e) {
+    console.log('balance')
     res.status(500).send({ error: e.message })
   }
 })
@@ -214,9 +226,11 @@ app.get('/subscribeToChanges', async (req, res) => {
   client = res
 
   req.on('close', () => {
-    client = null
+    console.log('connection closed');
+    client = null;
   })
 })
+
 
 app.get('/getCurrentContract', async (req, res) => {
   try {
@@ -226,6 +240,7 @@ app.get('/getCurrentContract', async (req, res) => {
     }
     return res.status(200).send({ contract: contracts[contractFilename] })
   } catch (e) {
+    console.log('curr')
     return res.status(500).send({ error: e.message })
   }
 })
@@ -322,6 +337,7 @@ async function getTransaction(txHash) {
 
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
+
   filesReturned.map((file) => {
     const basename = path.basename(file)
     solidityFileDirMappings[[basename]] = file
@@ -412,7 +428,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    throw new Error(e.message)
+    throw new Error(e)
   }
 }
 
@@ -440,12 +456,7 @@ async function deployContracts(abis, bytecodes, constructor) {
     }
     deploymentString += ')'
   
-    // console.log('\n\n\n\nb4 error!!!')
-    // console.log(deploymentString); 
-    
     const contract = await eval(deploymentString)
-    // console.log('\n\n\n\nafter error!!!\n\n\n\n')
-  
     return [factory, contract]
   } catch (e) { 
     console.log('deployment error: ');
@@ -532,25 +543,28 @@ chokidar
       try { 
         [abis, bytecode] = await compileContract(fileBasename)
       } catch (e) {
-        // It will send an error to the frontend b/c of the compiler error, no need to do more here. 
+        sendErrorToFrontend(e)
+
+        return;
       }
 
       let tempContract = null
       if (!hasConstructor(abis)) {
         let [factory, contract] = await deployContracts(abis, bytecode, [])
         tempContract = contract
+      } else {
+        // TODO: redeploy with constructors.
+        console.log('i guess this doesnt get deployed????'); 
       }
 
-      // console.log('contracts value: ', contracts);
-
-      // contracts[fileBasename]['historicalChanges'].push(
-      //   contracts[fileBasename]['currentVersion'],
-      // )
-      // contracts[fileBasename]['currentVersion'] = createNewContract(
-      //   filePath,
-      //   abis,
-      //   tempContract === null ? {} : tempContract,
-      // )
+      contracts[fileBasename]['historicalChanges'].push(
+        contracts[fileBasename]['currentVersion'],
+      )
+      contracts[fileBasename]['currentVersion'] = createNewContract(
+        filePath,
+        abis,
+        tempContract === null ? {} : tempContract,
+      )
       return refreshFrontend()
     }
   })
