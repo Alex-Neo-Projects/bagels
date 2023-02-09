@@ -14,6 +14,6 @@ contract TestContract {
   }
 
   function setGreeting(string memory newGreeting) public { 
-    theGreeting = newGreeting; 
+    theGreeting = newGreeting
   }
 }

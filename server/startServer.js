@@ -414,9 +414,12 @@ async function compileContract(file) {
     let errors = output.errors
 
     if (errors) {
-      let err = errors.filter((error, _) => error.severity === 'error')
+      let err = errors
+        .filter((error) => error.severity === 'error')
+        .map((error) => error.formattedMessage)
+
       if (err.length > 0) {
-        throw new Error(JSON.stringify({ errors: err }))
+        throw new Error(err)
       }
     }
 
@@ -432,7 +435,7 @@ async function compileContract(file) {
 
     return [abis, byteCodes]
   } catch (e) {
-    throw new Error(e)
+    throw new Error(e.message)
   }
 }
 

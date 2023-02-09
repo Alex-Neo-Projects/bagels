@@ -41,18 +41,14 @@ export default function Contracts({ contractFilename }) {
         if (event) {
           const message = JSON.parse(event.data)
 
-          // console.log('received event!!!!: ', message)
-
           try {
             if (message.msg === 'redeployed') {
               clear()
               await init()
             } else if (message.error) {
-              // console.log('inside 3')
               throw new Error(message.error)
             }
           } catch (e) {
-            console.log('catch the e')
             setError(e)
           }
         } else {
@@ -76,8 +72,6 @@ export default function Contracts({ contractFilename }) {
 
   async function init() {
     try {
-      console.log('REINITIALIZING...')
-
       await getBalance()
       const contract = await getContract()
 
@@ -87,17 +81,6 @@ export default function Contracts({ contractFilename }) {
         Object.values(returnedAbi)
           .flat(2)
           .filter((curr) => curr.type === 'constructor')?.length > 0
-
-      // console.log(hasConstructor)
-      // let hasContract =
-      //   Object.values(contract['currentVersion']['contract']).length > 0
-
-      // if (
-      //   hasConstructor &&
-      //   hasContract
-      // ) {
-      //   return
-      // }
 
       if (hasConstructor) {
         setHasConstructor(true)
@@ -122,17 +105,14 @@ export default function Contracts({ contractFilename }) {
 
   async function TextInputDeployContract(constructor) {
     try {
-      // console.log('TEXT DEPLOYING')
       await deployContract(contractFilename, constructor)
       setConstructorDeployed(true)
     } catch (e) {
-      console.log(e.message)
+      setError(e)
     }
   }
 
   async function deployContract(contractFilename, constructor) {
-    // console.log('DEPLOYING CONTRACT')
-
     const deployment = await fetch(`${SERVER_URL}/deployContract`, {
       method: 'POST',
       headers: {
@@ -143,10 +123,8 @@ export default function Contracts({ contractFilename }) {
         constructor: constructor,
       }),
     })
-    // console.log('DEPLOYING CONTRACT STATUS: ', deployment.status)
 
     const deploymentParsed = await deployment.json()
-    // console.log('DEPLOYING CONTRACT parsed: ', deploymentParsed)
 
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error)
@@ -297,7 +275,7 @@ export default function Contracts({ contractFilename }) {
             {error && (
               <div className="justify-start items-start pt-1 w-full">
                 <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
-                  Error: {error?.message || ''}
+                  {error?.message || ''}
                 </p>
               </div>
             )}
