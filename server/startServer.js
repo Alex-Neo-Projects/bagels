@@ -40,7 +40,7 @@ app.get('/solidityFiles', async (req, res) => {
 
     return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
   } catch (e) {
-    console.log('error: ', e);
+    // console.log('error: ', e)
 
     return res.status(500).send({ error: e.message })
   }
@@ -54,16 +54,16 @@ app.post('/deployContract', async (req, res) => {
       throw new Error('Cannot deploy contract, no filename provided')
     }
 
-    let firstDeploy = false;
+    let firstDeploy = false
 
     // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
     if (contracts[contractFilename]) {
       if (contracts[contractFilename]['historicalChanges'].length === 0) {
-        firstDeploy = true;
+        firstDeploy = true
       }
     }
 
-    if (firstDeploy) {
+    if (firstDeploy || constructor.length > 0) {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
       let tempContract
@@ -85,7 +85,7 @@ app.post('/deployContract', async (req, res) => {
       )
       contracts[contractFilename]['currentVersion'] = contract
     }
-    
+
     return res.status(200).send({
       message: 'Contract Deployed',
       contract: contracts[contractFilename]['currentVersion'],
@@ -149,40 +149,43 @@ app.post('/executeTransaction', async (req, res) => {
       ...params.map((param) => param[0]),
     ])
 
-    let txRes; 
-    let txReceipt; 
+    let txRes
+    let txReceipt
 
     // Convert the value to a hex value since the frontend sends ints
-    let hexAmount = amount ? amount.toString(16) : '0x0'; 
+    let hexAmount = amount ? amount.toString(16) : '0x0'
 
-    let paramData =  {
+    let paramData = {
       from: wallet.address,
-      to:
-        contracts[contractFilename]['currentVersion']['contract']['address'],
+      to: contracts[contractFilename]['currentVersion']['contract']['address'],
       value: hexAmount,
       data: functionEncodedSignature,
     }
 
     if (!paramData.to) {
-      throw new Error("Error: Couldn't deploy contract.");
+      throw new Error("Error: Couldn't deploy contract.")
     }
 
     // Need to use eth_call RPC function for view only functions
-    if (stateMutability === 'pure' || stateMutability === 'view' || stateMutability === 'constant') {
+    if (
+      stateMutability === 'pure' ||
+      stateMutability === 'view' ||
+      stateMutability === 'constant'
+    ) {
       txRes = await callContractFunction(paramData)
 
       // No tx receipt returned by eth_call since it's not modifying state.
-      txReceipt = null;
-      
-      console.log('result of txres: ', txRes);
+      txReceipt = null
+
+      // console.log('result of txres: ', txRes)
 
       // TODO: Fix this later! Should be checking the return type of a function instead!!!
       if (txRes.result.length === 66 || txRes.result.length === 34) {
-        txRes.result = parseInt(txRes.result, 16);
+        txRes.result = parseInt(txRes.result, 16)
       } else {
-        txRes.result = Buffer.from(txRes.result.slice(2), 'hex').toString();
+        txRes.result = Buffer.from(txRes.result.slice(2), 'hex').toString()
       }
-    } 
+    }
     // If it's a write function, we need to use the send_transaction RPC call
     else {
       txRes = await sendTransaction(paramData)
@@ -201,18 +204,17 @@ app.post('/executeTransaction', async (req, res) => {
         },
         receipt: txReceipt ? txReceipt.result : null,
       }
-  
+
       contracts[contractFilename]['currentVersion']['transactions'].push(txData)
     }
 
-
-    if (txRes.error) { 
-      return res.status(500).send({error: txRes.error.message})
+    if (txRes.error) {
+      return res.status(500).send({ error: txRes.error.message })
     }
 
-    return res.status(200).send({ output: [txRes.result]})
+    return res.status(200).send({ output: [txRes.result] })
   } catch (e) {
-    console.log('error here? ', e);
+    // console.log('error here? ', e)
     return res.status(500).send({ error: e.message })
   }
 })
@@ -229,10 +231,9 @@ app.get('/subscribeToChanges', async (req, res) => {
   client = res
 
   req.on('close', () => {
-    client = null;
+    client = null
   })
 })
-
 
 app.get('/getCurrentContract', async (req, res) => {
   try {
@@ -288,7 +289,7 @@ async function sendTransaction(params) {
 
 async function callContractFunction(params) {
   try {
-    console.log('call tx params: ', params); 
+    // console.log('call tx params: ', params)
 
     const txRes = await fetch(`http://127.0.0.1:8545`, {
       method: 'POST',
@@ -440,7 +441,7 @@ async function deployContracts(abis, bytecodes, constructor) {
   const factory = new ContractFactory(abi, Object.values(bytecodes)[0], wallet)
   let deploymentString = 'factory.deploy('
 
-  try { 
+  try {
     for (
       var currentIndex = 0;
       currentIndex < constructor.length;
@@ -448,21 +449,21 @@ async function deployContracts(abis, bytecodes, constructor) {
     ) {
       let param = constructor[currentIndex][0]
       let type = constructor[currentIndex][1]
-  
+
       if (type === 'string') deploymentString += "'" + param + "'"
       else deploymentString += param
-  
+
       // Add commas if there are multiple params
       if (currentIndex < constructor.length) {
         deploymentString += ','
       }
     }
     deploymentString += ')'
-  
+
     const contract = await eval(deploymentString)
     return [factory, contract]
-  } catch (e) { 
-    return [null, null];
+  } catch (e) {
+    return [null, null]
   }
 }
 
@@ -518,7 +519,7 @@ function sendErrorToFrontend(errorMessage) {
 }
 
 function hasConstructor(abis) {
-  if (!abis) return null;
+  if (!abis) return null
 
   return (
     Object.values(abis)
@@ -538,19 +539,26 @@ chokidar
 
       let fileBasename = path.basename(filePath)
 
-      let abis;
-      let bytecode;
-      try { 
-        [abis, bytecode] = await compileContract(fileBasename)
+      let tempAbis = null
+      let tempBytcode = null
+      try {
+        let [abis, bytecode] = await compileContract(fileBasename)
+
+        tempAbis = abis
+        tempBytcode = bytecode
       } catch (e) {
         sendErrorToFrontend(e)
-
-        return;
+        return
       }
 
+      // We check for constructors here because we only auto-deploy contracts w/ constructors
       let tempContract = null
-      if (!hasConstructor(abis)) {
-        let [factory, contract] = await deployContracts(abis, bytecode, [])
+      if (!hasConstructor(tempAbis)) {
+        let [factory, contract] = await deployContracts(
+          tempAbis,
+          tempBytcode,
+          [],
+        )
         tempContract = contract
       }
 
@@ -560,9 +568,10 @@ chokidar
 
       contracts[fileBasename]['currentVersion'] = createNewContract(
         filePath,
-        abis,
+        tempAbis,
         tempContract === null ? {} : tempContract,
       )
+
       return refreshFrontend()
     }
   })
