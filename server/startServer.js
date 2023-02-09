@@ -64,8 +64,6 @@ app.post('/deployContract', async (req, res) => {
     }
 
     if (firstDeploy) {
-      console.log('going to do first deploy contract'); 
-
       const [abis, byteCodes] = await compileContract(contractFilename)
 
       let tempContract
@@ -93,7 +91,6 @@ app.post('/deployContract', async (req, res) => {
       contract: contracts[contractFilename]['currentVersion'],
     })
   } catch (e) {
-    console.log('deploy')
     return res.status(500).send({ error: e.message })
   }
 })
@@ -115,7 +112,6 @@ app.get('/balances', async (req, res) => {
       eth: ether_balance,
     })
   } catch (e) {
-    console.log('balance')
     res.status(500).send({ error: e.message })
   }
 })
@@ -167,6 +163,10 @@ app.post('/executeTransaction', async (req, res) => {
       data: functionEncodedSignature,
     }
 
+    if (!paramData.to) {
+      throw new Error("Error: Couldn't deploy contract.");
+    }
+
     // Need to use eth_call RPC function for view only functions
     if (stateMutability === 'pure' || stateMutability === 'view' || stateMutability === 'constant') {
       txRes = await callContractFunction(paramData)
@@ -174,6 +174,8 @@ app.post('/executeTransaction', async (req, res) => {
       // No tx receipt returned by eth_call since it's not modifying state.
       txReceipt = null;
       
+      console.log('result of txres: ', txRes);
+
       // TODO: Fix this later! Should be checking the return type of a function instead!!!
       if (txRes.result.length === 66 || txRes.result.length === 34) {
         txRes.result = parseInt(txRes.result, 16);
@@ -210,6 +212,7 @@ app.post('/executeTransaction', async (req, res) => {
 
     return res.status(200).send({ output: [txRes.result]})
   } catch (e) {
+    console.log('error here? ', e);
     return res.status(500).send({ error: e.message })
   }
 })
@@ -226,7 +229,6 @@ app.get('/subscribeToChanges', async (req, res) => {
   client = res
 
   req.on('close', () => {
-    console.log('connection closed');
     client = null;
   })
 })
@@ -240,7 +242,6 @@ app.get('/getCurrentContract', async (req, res) => {
     }
     return res.status(200).send({ contract: contracts[contractFilename] })
   } catch (e) {
-    console.log('curr')
     return res.status(500).send({ error: e.message })
   }
 })
@@ -287,6 +288,8 @@ async function sendTransaction(params) {
 
 async function callContractFunction(params) {
   try {
+    console.log('call tx params: ', params); 
+
     const txRes = await fetch(`http://127.0.0.1:8545`, {
       method: 'POST',
       headers: {
@@ -459,9 +462,6 @@ async function deployContracts(abis, bytecodes, constructor) {
     const contract = await eval(deploymentString)
     return [factory, contract]
   } catch (e) { 
-    console.log('deployment error: ');
-    console.log(e);
-
     return [null, null];
   }
 }
@@ -552,14 +552,12 @@ chokidar
       if (!hasConstructor(abis)) {
         let [factory, contract] = await deployContracts(abis, bytecode, [])
         tempContract = contract
-      } else {
-        // TODO: redeploy with constructors.
-        console.log('i guess this doesnt get deployed????'); 
       }
 
       contracts[fileBasename]['historicalChanges'].push(
         contracts[fileBasename]['currentVersion'],
       )
+
       contracts[fileBasename]['currentVersion'] = createNewContract(
         filePath,
         abis,
