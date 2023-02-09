@@ -547,8 +547,9 @@ chokidar
         tempAbis = abis
         tempBytcode = bytecode
       } catch (e) {
-        sendErrorToFrontend(e)
-        return
+        // This will refresh the frontend, then deploy the new version.
+        // The errors will show on the frontend because they'll be received from the deploy
+        return refreshFrontend()
       }
 
       // We check for constructors here because we only auto-deploy contracts w/ constructors
