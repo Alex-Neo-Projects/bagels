@@ -6,7 +6,14 @@ import { getFilepath, getPathDirname } from '../utils.js'
 async function main() {
   const serverDir = getFilepath([getPathDirname(), 'server'])
 
-  const nodeProcess = spawn('node', ['startServer.js', process.cwd()], {cwd: serverDir})
+  const serverToLookIn = process.cwd();
+
+  if (!serverToLookIn) { 
+    console.log('error starting server, plz restart bagels!');
+    return;
+  }
+
+  const nodeProcess = spawn('node', ['startServer.js', serverToLookIn], {cwd: serverDir})
 
   nodeProcess.stdout.on('data', (data) => {
     if (data.toString().includes('server started and listening for requests')) {

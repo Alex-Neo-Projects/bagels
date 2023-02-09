@@ -38,25 +38,26 @@ export default function Contracts({ contractFilename }) {
       const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
 
       events.onmessage = async (event) => {
-        try {
-          if (event) {
-            const message = JSON.parse(event.data)
+        if (event) {
+          const message = JSON.parse(event.data)
 
-            switch (message.msg) {
-              case 'redeployed': {
-                clear()
-                await init()
-                break
-              }
-              case error: {
-                throw new Error(message.error)
-              }
+          console.log('received event!!!!: ', message); 
+
+          try {
+            if (message.msg === 'redeployed') {
+              clear()
+              await init()
+            } 
+            else if (message.error) {
+              // console.log('inside 3')
+              throw new Error(message.error)
             }
-          } else {
-            throw new Error('Unable to get event message')
+          } catch (e) { 
+            console.log('catch the e');
+            setError(e)
           }
-        } catch (e) {
-          setError(e)
+        } else {
+          throw new Error('Unable to get event message')
         }
       }
 
