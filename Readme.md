@@ -32,6 +32,7 @@ Join our [discord](https://discord.gg/DC77fxj3ks)!
    - Bagels is about making the initial process of writing contracts faster and more fun by tightening the feedback loop.
 3) **Bagels doesn't (YET) work with contracts requiring different versions of solidity than the one you have installed locally**
    - to check your solc version, do `solcjs --version` in the command line.
+4) **Bagels only works on mac right now**
 
 ## Acknowledgements
 
