@@ -3,6 +3,8 @@ import { Worker } from 'worker_threads'
 import process, { kill } from 'process'
 import open from 'open'
 import { getFilepath, getPathDirname } from '../utils.js'
+import { PostHog } from 'posthog-node'
+import os from 'os';
 
 async function workerPromise(script) {
   return await new Promise((resolve, reject) => {
@@ -26,7 +28,12 @@ async function workerPromise(script) {
   })
 }
 
-let children = []
+let children = [];
+
+const client = new PostHog(
+  'phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4',
+  { host: 'https://app.posthog.com' }
+)
 
 async function main() {
   try {
@@ -62,6 +69,12 @@ async function main() {
       process.exit(1)
     }
     children.push(uiWorker)
+
+    // Capture bagels starts
+    client.capture({
+      distinctId: os.userInfo().username,
+      event: 'bagels-started'
+    })
 
     // Start Local Host
     open('http://localhost:9091/')

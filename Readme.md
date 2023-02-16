@@ -34,6 +34,11 @@ Join our [discord](https://discord.gg/DC77fxj3ks)!
    - to check your solc version, do `solcjs --version` in the command line.
 4) **Bagels only works on mac right now**
 
+## Analytics
+We use analytics to find out if bagels is useful, and how many people out there rely on it. We track all analytics using [posthog](https://posthog.com/). We only do this because NPM install analytics seem to be... very inaccurate.
+
+If this is a dealbreaker for using bagels, open an issue!
+
 ## Acknowledgements
 
 - Shoutout to [foundry](https://github.com/foundry-rs/foundry), because we use Anvil in this project for the local network :)
