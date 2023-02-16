@@ -1,5 +1,5 @@
 import fs from 'fs'
-import bagelsSolc from "bagels-solc";
+import bagelsSolc from "bagels-solc-js";
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
