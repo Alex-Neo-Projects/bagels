@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0;
 
-import "./MyParentContract.sol";
-
-contract BasicContract is MyParentContract { 
+contract BasicContract { 
   string private theGreeting = 'hello world'; 
   string public newVar = 'asdfasdfa';
 

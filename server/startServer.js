@@ -1,11 +1,12 @@
 import fs from 'fs'
-import solc from 'solc'
+import bagelsSolc from "bagels-solc";
 import { ContractFactory, ethers } from 'ethers'
 import express from 'express'
 import cors from 'cors'
 import chokidar from 'chokidar'
 import path from 'path'
 import fetch from 'node-fetch'
+import { getPragmaSolidity } from './parseSolcVersion.js';
 
 const provider = new ethers.providers.JsonRpcProvider('http://127.0.0.1:8545')
 // hardcoded private key from one of the anvil wallets
@@ -405,6 +406,12 @@ async function compileContract(file) {
         },
       },
     }
+
+    const specificSolVersion = bagelsSolc.default;
+
+    const contractPragmaVersion = getPragmaSolidity(fileAsString);
+    console.log(contractPragmaVersion);
+    const solc = await specificSolVersion(contractPragmaVersion);
 
     let output = JSON.parse(
       solc.compile(JSON.stringify(input), { import: findImports }),
