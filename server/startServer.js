@@ -410,7 +410,6 @@ async function compileContract(file) {
     const specificSolVersion = bagelsSolc.default;
 
     const contractPragmaVersion = getPragmaSolidity(fileAsString);
-    console.log(contractPragmaVersion);
     const solc = await specificSolVersion(contractPragmaVersion);
 
     let output = JSON.parse(
@@ -489,10 +488,14 @@ async function checkEtherBalance(provider, address) {
 
 function findImports(fileName) {
   try {
+    console.log('importing: ', fileName);
+
     // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
     const justTheFileName = path.basename(fileName)
 
     let file
+
+    console.log(solidityFileDirMappings);
 
     // Import is another contract somewhere inside the root directory
     if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
