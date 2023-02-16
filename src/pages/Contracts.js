@@ -105,6 +105,7 @@ export default function Contracts({ contractFilename }) {
 
   async function TextInputDeployContract(constructor) {
     try {
+      console.log('constructor', constructor);
       await deployContract(contractFilename, constructor)
       setConstructorDeployed(true)
     } catch (e) {
@@ -129,6 +130,8 @@ export default function Contracts({ contractFilename }) {
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error)
     } else {
+      console.log(deploymentParsed['contract']);
+
       setContractAddress(deploymentParsed['contract']['contract']['address'])
       setContract(deploymentParsed['contract'])
     }

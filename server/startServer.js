@@ -460,6 +460,7 @@ async function deployContracts(abis, bytecodes, constructor) {
       let type = constructor[currentIndex][1]
 
       if (type === 'string') deploymentString += "'" + param + "'"
+      else if (type === 'address') deploymentString += "'" + param + "'"
       else deploymentString += param
 
       // Add commas if there are multiple params
@@ -470,8 +471,10 @@ async function deployContracts(abis, bytecodes, constructor) {
     deploymentString += ')'
 
     const contract = await eval(deploymentString)
+
     return [factory, contract]
   } catch (e) {
+    console.log('deployment error: ', e);
     return [null, null]
   }
 }
@@ -488,27 +491,40 @@ async function checkEtherBalance(provider, address) {
 
 function findImports(fileName) {
   try {
-    console.log('importing: ', fileName);
-
     // Needed because sometimes imports look like: interfaces/IUniswapV2ERC20.sol while our mappings array would only have IUniswapV2ERC20.sol
     const justTheFileName = path.basename(fileName)
 
     let file
 
-    console.log(solidityFileDirMappings);
-
     // Import is another contract somewhere inside the root directory
     if (fs.existsSync(solidityFileDirMappings[justTheFileName])) {
       file = fs.readFileSync(solidityFileDirMappings[justTheFileName])
     } else {
+      // Given an import like @openzeppelin/Test
+      // This assumes folder structure
       let nodePackagePath = path.join(node_modulesDirLocation, fileName)
+      
+      // Whereas this assumes the file is in node_modules/test.sol
+      let fileInNodePackagePath = path.join(node_modulesDirLocation, justTheFileName)
+
+      // Same situation for forge. Especially useful for forge since you might
+      // have a folder called lib/ that's *not* used in forge
       let forgePackagePath = path.join(libDirLocation, fileName)
+      let fileInForgePackagePath = path.join(libDirLocation, justTheFileName)
 
       if (fs.existsSync(nodePackagePath)) {
         file = fs.readFileSync(nodePackagePath)
-      } else if (fs.existsSync(forgePackagePath)) {
+      } 
+      else if (fs.existsSync(fileInNodePackagePath)) {
+        file = fs.readFileSync(fileInNodePackagePath);
+      }
+      else if (fs.existsSync(forgePackagePath)) {
         file = fs.readFileSync(forgePackagePath)
-      } else throw Error(`Couldn't find the import ${file}`)
+      } 
+      else if (fs.existsSync(fileInForgePackagePath)) {
+        file = fs.readFileSync(fileInForgePackagePath);
+      } 
+      else throw Error(`Couldn't find the import ${fileName}`)
     }
 
     return {
