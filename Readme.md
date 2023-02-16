@@ -37,6 +37,9 @@ Join our [discord](https://discord.gg/DC77fxj3ks)!
 ## Analytics
 We use analytics to find out if bagels is useful, and how many people out there rely on it. We track all analytics using [posthog](https://posthog.com/). We only do this because NPM install analytics seem to be... very inaccurate.
 
+Currently we track: 
+   - Bagels being started (we use your computer's username to see distinct users).
+
 If this is a dealbreaker for using bagels, open an issue!
 
 ## Acknowledgements
