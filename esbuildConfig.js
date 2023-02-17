@@ -7,7 +7,7 @@ let context = await esbuild.context({
   minify: true,
   outfile: './public/build/bundle.js',
   jsx: 'automatic',
-  loader: { '.js': 'jsx', '.eot': 'file', '.ttf': 'file', '.woff': 'file', '.woff2': 'file' }
+  loader: { '.js': 'jsx', '.eot': 'file', '.ttf': 'file', '.woff': 'file', '.woff2': 'file', '.png': 'dataurl' }
 })
 
 await context.watch();

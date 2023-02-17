@@ -380,15 +380,21 @@ function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
 
   filesReturned.map((file) => {
-    const basename = path.basename(file)
-    solidityFileDirMappings[[basename]] = file
+    const readFile = fs.readFileSync(file).toString();
+    if (readFile.includes('interface ') && !readFile.includes('contract ')) {
+      // do nothing, because we don't want to show interface contracts on the frontend
+    } else { 
+      const basename = path.basename(file)
+      solidityFileDirMappings[[basename]] = file
 
-    if (!(basename in contracts)) {
-      contracts[basename] = {
-        currentVersion: {},
-        historicalChanges: [],
+      if (!(basename in contracts)) {
+        contracts[basename] = {
+          currentVersion: {},
+          historicalChanges: [],
+        }
       }
     }
+
   })
 }
 
