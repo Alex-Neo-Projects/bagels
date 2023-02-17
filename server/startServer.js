@@ -146,6 +146,7 @@ app.post('/executeTransaction', async (req, res) => {
         1,
       ),
     )
+
     const functionEncodedSignature = iface.encodeFunctionData(functionName, [
       ...params.map((param) => param[0]),
     ])
@@ -178,13 +179,10 @@ app.post('/executeTransaction', async (req, res) => {
       // No tx receipt returned by eth_call since it's not modifying state.
       txReceipt = null
 
-      // console.log('result of txres: ', txRes)
-
-      // TODO: Fix this later! Should be checking the return type of a function instead!!!
-      if (txRes.result.length === 66 || txRes.result.length === 34) {
-        txRes.result = parseInt(txRes.result, 16)
+      if (txRes['error']) {
+        txRes.result = txRes['error']['message'];
       } else {
-        txRes.result = Buffer.from(txRes.result.slice(2), 'hex').toString()
+        txRes.result = decodeFunctionResult(iface, functionName, txRes.result)
       }
     }
     // If it's a write function, we need to use the send_transaction RPC call
@@ -252,6 +250,21 @@ app.get('/getCurrentContract', async (req, res) => {
 // because this is the signal that the server is up and running!
 app.listen(PORT, () => console.log('server started and listening for requests'))
 
+function decodeFunctionResult(iface, functionName, txResult) {
+  let functionResult = iface.decodeFunctionResult(functionName, txResult);
+
+  let finalResult = '';
+  for (var index = 0; index < functionResult.length; index++) {
+    finalResult += functionResult[index].toString()
+
+    if (functionResult.length > 1 && index !== functionResult.length -1) { 
+      finalResult += ', '
+    }
+  }
+
+  return finalResult;
+}
+
 function createNewContract(filename, abis, contract) {
   let res = {
     contract: contract,
@@ -290,8 +303,6 @@ async function sendTransaction(params) {
 
 async function callContractFunction(params) {
   try {
-    // console.log('call tx params: ', params)
-
     const txRes = await fetch(`http://127.0.0.1:8545`, {
       method: 'POST',
       headers: {
