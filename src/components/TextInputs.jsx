@@ -250,7 +250,7 @@ export function TextInputs({
                 {output.map((res, idx) => {
                   return (
                     <>
-                      <p key={idx.toString()} className="text-sm">
+                      <p key={idx.toString()} style={{ whiteSpace: 'pre-line' }} className="text-sm">
                         {res}
                       </p>
                     </>

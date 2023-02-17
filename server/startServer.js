@@ -179,17 +179,42 @@ app.post('/executeTransaction', async (req, res) => {
       // No tx receipt returned by eth_call since it's not modifying state.
       txReceipt = null
 
+      let output = '';
       if (txRes['error']) {
-        txRes.result = txRes['error']['message'];
+        output += txRes['error']['message'];
       } else {
-        txRes.result = decodeFunctionResult(iface, functionName, txRes.result)
+        output += 'Output: ' + decodeFunctionResult(iface, functionName, txRes.result)
       }
+
+      txRes.result = output;
     }
     // If it's a write function, we need to use the send_transaction RPC call
     else {
       txRes = await sendTransaction(paramData)
 
+      let txHash = txRes.result;
       txReceipt = await getTransaction(txRes.result)
+
+      // 0 === failed tx
+      // 1 === succeesed
+      const txStatus = parseInt(txReceipt.result.status, 16);
+
+      if (txStatus === 0) {
+        // For some reason, the tx fail logs are always empty, so I haven't been able to 
+        // get the revert reason.
+        txRes['error'] = {'message': 'Transaction failed (reverted)'};
+      } else {
+        const decoded = decodeFunctionResult(iface, functionName, txRes.result);
+        
+        let txOutput = '';
+
+        if (decoded) { 
+          txOutput += 'Output: ' + decodeFunctionResult(iface, functionName, txRes.result) + '\n\n';
+        }
+        txOutput += `Transaction hash: ${txHash}`
+
+        txRes.result = txOutput;
+      }
 
       // Store transaction in contract history
       let txData = {
