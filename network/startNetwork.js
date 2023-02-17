@@ -6,9 +6,9 @@ import { getFilepath, getPathDirname } from '../utils.js'
 import { PostHog } from 'posthog-node'
 import os from 'os';
 
-async function workerPromise(script) {
+async function workerPromise(script, data) {
   return await new Promise((resolve, reject) => {
-    let w = new Worker(script, {})
+    let w = new Worker(script, { workerData: data})
     let pid; 
 
     w.on('message', (message) => {
@@ -47,7 +47,16 @@ async function main() {
       frontendPath: getFilepath([getPathDirname(), 'network', 'spawnUI.js']),
     }
 
-    const anvilWorker = await workerPromise(filePaths.anvilPath)
+    let forkNetwork;
+
+    // Only args is forking
+    if (process.argv.indexOf('--fork') >= 0) {
+      // Just get whatever is after --fork
+      forkNetwork = process.argv[process.argv.indexOf('--fork') + 1];
+    }
+
+    const anvilWorker = await workerPromise(filePaths.anvilPath, {'network': forkNetwork})
+
     if (!anvilWorker) {
       console.log('Unable to start Anvil')
       process.exit(1)

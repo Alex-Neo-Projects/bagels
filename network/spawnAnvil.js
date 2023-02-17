@@ -1,20 +1,29 @@
 #!/usr/bin/env node
 import { spawn } from 'child_process'
 import { kill } from 'process'
-import { isMainThread, parentPort } from 'worker_threads'
+import { isMainThread, parentPort, workerData } from 'worker_threads'
 import { getFilepath, getPathDirname } from '../utils.js';
 
 let anvilProcessGlobal
 
-export function startupAnvil(network = '') {
+export function startupAnvil() {
   const anvilDir = getFilepath([getPathDirname()])
 
   let args = []
-  if (network === 'mainnet') {
-    args = [
-      '--fork-url',
-      'https://eth-mainnet.g.alchemy.com/v2/YKOGR_zFYv0ouTsGab24VKwOm5w7k6QZ',
-    ]
+
+  if (workerData && workerData['network']) {
+    if (workerData['network'] === 'mainnet') {
+      console.log('Forking mainnet plz wait...');
+  
+      args = [
+        '--fork-url',
+        'https://eth-mainnet.g.alchemy.com/v2/YKOGR_zFYv0ouTsGab24VKwOm5w7k6QZ',
+      ]
+    }
+    else { 
+      console.log(`Forking network: ${workerData['network']} is not an option.`)
+      console.log(`Bagels only supports forking mainnet with: bagels --fork mainnet\n`)
+    }
   }
 
   const nodeProcess = spawn('./anvil', args, { cwd: anvilDir})
