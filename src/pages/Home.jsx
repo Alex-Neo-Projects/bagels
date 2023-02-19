@@ -60,7 +60,7 @@ export default function Home() {
               <p className="text-2xl tracking-tighter text-left font-bold">
                 Select a contract
               </p>
-              <img src={require('../assets/tooltip.png')} className="pl-2 hover:cursor-grab" style={{height: 25}} onClick={() => alert('This is a list of contracts found in the directory you ran `bagels` in (not including interface contracts)')}/>
+              <img src={require('../assets/tooltip.png')} className="pl-2 hover:cursor-grab" style={{height: 25}} onClick={() => alert('This is a list of contracts found in the directory you ran `bagels` in (not including interface or library contracts)')}/>
             </div>
 
             {loading && (

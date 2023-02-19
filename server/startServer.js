@@ -37,11 +37,10 @@ app.get('/', (req, res) => {
 
 app.get('/solidityFiles', async (req, res) => {
   try {
-    getSolidityFiles()
+    const solidityFiles = getSolidityFiles()
 
-    return res.status(200).send({ files: Object.keys(solidityFileDirMappings) })
+    return res.status(200).send({ files: solidityFiles})
   } catch (e) {
-    // console.log('error: ', e)
 
     return res.status(500).send({ error: e.message })
   }
@@ -67,6 +66,8 @@ app.post('/deployContract', async (req, res) => {
     if (firstDeploy || constructor.length > 0) {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
+      fs.writeFileSync('file.txt', JSON.stringify(byteCodes))
+      
       let tempContract
       if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(
@@ -191,6 +192,7 @@ app.post('/executeTransaction', async (req, res) => {
     // If it's a write function, we need to use the send_transaction RPC call
     else {
       txRes = await sendTransaction(paramData)
+
 
       let txHash = txRes.result;
       txReceipt = await getTransaction(txRes.result)
@@ -379,23 +381,48 @@ async function getTransaction(txHash) {
 function getSolidityFiles() {
   let filesReturned = getAllFiles(userRealDirectory)
 
+  let returnValues = []; 
+
   filesReturned.map((file) => {
     const readFile = fs.readFileSync(file).toString();
-    if (readFile.includes('interface ') && !readFile.includes('contract ')) {
-      // do nothing, because we don't want to show interface contracts on the frontend
-    } else { 
-      const basename = path.basename(file)
-      solidityFileDirMappings[[basename]] = file
+    const lines = readFile.split('\n'); 
 
-      if (!(basename in contracts)) {
-        contracts[basename] = {
-          currentVersion: {},
-          historicalChanges: [],
+    // Set to true if we have evidence that a file is a contract and not an interface or library 
+    let isContract = false;
+
+    lines.forEach((line) => {
+      if (line.includes('contract ')) {
+        // TODO: Write unit tests to try more ideas later.
+        // Invalid examples of the contract string: 
+        // contract is contained by quotes: return "This is a new contract ";
+        // Contract is on the same line as a comment: // this is for a contract of type X
+
+        if (!line.includes('//')) {
+          if (!line.includes(";")) {
+            isContract = true;
+          }
         }
+      } 
+    })
+
+    // Still need to add interface/library contracts to solidityFileDirMappings since they could be imported elsewhere.
+    const basename = path.basename(file)
+    solidityFileDirMappings[[basename]] = file
+    
+    if (!(basename in contracts)) {
+      contracts[basename] = {
+        currentVersion: {},
+        historicalChanges: [],
       }
     }
-
+    
+    // Only return contracts contracts that are not an interface or library to the bagels UI
+    if (isContract) {
+      returnValues.push(basename);
+    }
   })
+
+  return returnValues;
 }
 
 function getAllFiles(dirPath, arrayOfFiles) {
