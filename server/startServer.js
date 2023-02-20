@@ -184,6 +184,8 @@ app.post('/executeTransaction', async (req, res) => {
       if (txRes['error']) {
         output += txRes['error']['message'];
       } else {
+        console.log('b4 error????');
+        console.log('tx res: ', txRes);
         output += 'Output: ' + decodeFunctionResult(iface, functionName, txRes.result)
       }
 
@@ -192,7 +194,6 @@ app.post('/executeTransaction', async (req, res) => {
     // If it's a write function, we need to use the send_transaction RPC call
     else {
       txRes = await sendTransaction(paramData)
-
 
       let txHash = txRes.result;
       txReceipt = await getTransaction(txRes.result)
@@ -235,12 +236,13 @@ app.post('/executeTransaction', async (req, res) => {
     }
 
     if (txRes.error) {
+      console.log('error: ', txRes);
       return res.status(500).send({ error: txRes.error.message })
     }
 
     return res.status(200).send({ output: [txRes.result] })
   } catch (e) {
-    // console.log('error here? ', e)
+    console.log('error here? ', e)
     return res.status(500).send({ error: e.message })
   }
 })
@@ -388,22 +390,22 @@ function getSolidityFiles() {
     const lines = readFile.split('\n'); 
 
     // Set to true if we have evidence that a file is a contract and not an interface or library 
-    let isContract = true;
+    let isContract = false;
 
-    // lines.forEach((line) => {
-    //   if (line.includes('contract ')) {
-    //     // TODO: Write unit tests to try more ideas later.
-    //     // Invalid examples of the contract string: 
-    //     // contract is contained by quotes: return "This is a new contract ";
-    //     // Contract is on the same line as a comment: // this is for a contract of type X
+    lines.forEach((line) => {
+      if (line.includes('contract ')) {
+        // TODO: Write unit tests to try more ideas later.
+        // Invalid examples of the contract string: 
+        // contract is contained by quotes: return "This is a new contract ";
+        // Contract is on the same line as a comment: // this is for a contract of type X
 
-    //     if (!line.includes('//')) {
-    //       if (!line.includes(";")) {
-    //         isContract = true;
-    //       }
-    //     }
-    //   } 
-    // })
+        if (!line.includes('//')) {
+          if (!line.includes(";")) {
+            isContract = true;
+          }
+        }
+      } 
+    })
 
     // Still need to add interface/library contracts to solidityFileDirMappings since they could be imported elsewhere.
     const basename = path.basename(file)
@@ -437,11 +439,10 @@ function getAllFiles(dirPath, arrayOfFiles) {
       return
     }
     // Same as above for lib/ (used in forge);
-    // else if (file.includes('lib/')) {
-    //   libDirLocation = path.join(dirPath, '/', file)
-    //   return
-    // }
-    else if (fs.statSync(dirPath + '/' + file).isDirectory()) {
+    else if (file.includes('lib')) {
+      libDirLocation = path.join(dirPath, '/', file)
+      return
+    } else if (fs.statSync(dirPath + '/' + file).isDirectory()) {
       arrayOfFiles = getAllFiles(dirPath + '/' + file, arrayOfFiles)
     } else {
       // Only want .sol files, need to exclude .t.sol and .s.sol (forge)
@@ -521,36 +522,31 @@ async function deployContracts(abis, bytecodes, constructor) {
   let deploymentString = 'factory.deploy('
 
   try {
-    // for (
-    //   var currentIndex = 0;
-    //   currentIndex < constructor.length;
-    //   currentIndex++
-    // ) {
-    //   let param = constructor[currentIndex][0]
-    //   let type = constructor[currentIndex][1]
+    for (
+      var currentIndex = 0;
+      currentIndex < constructor.length;
+      currentIndex++
+    ) {
+      let param = constructor[currentIndex][0]
+      let type = constructor[currentIndex][1]
 
-    //   if (type === 'string') deploymentString += "'" + param + "'"
-    //   else if (type === 'address') deploymentString += "'" + param + "'"
-    //   else deploymentString += param
+      if (type === 'string') deploymentString += "'" + param + "'"
+      else if (type === 'address') deploymentString += "'" + param + "'"
+      else deploymentString += param
 
-    //   // Add commas if there are multiple params
-    //   if (currentIndex < constructor.length) {
-    //     deploymentString += ','
-    //   }
-    // }
-    // deploymentString += ')'
+      // Add commas if there are multiple params
+      if (currentIndex < constructor.length) {
+        deploymentString += ','
+      }
+    }
 
-    // const contract = await eval(deploymentString)
+    deploymentString += '{gasLimit: 2000000})'
 
-    let paramData = {
-      from: wallet.address,
-      gas: "0x1c31e",
-      data: Object.values(bytecodes)[0],
-    };
+    console.log(deploymentString);
 
+    const contract = await eval(deploymentString)
 
-
-    return [factory, contract];
+    return [factory, contract]
   } catch (e) {
     console.log('deployment error: ', e);
     return [null, null]
