@@ -73,7 +73,7 @@ export default function Contracts({ contractFilename }) {
   async function init() {
     try {
       await getBalance();
-      const contract = await getContract();
+      await getContract();
 
       const { returnedAbi } = await getABI();
 
@@ -105,7 +105,6 @@ export default function Contracts({ contractFilename }) {
 
   async function TextInputDeployContract(constructor) {
     try {
-      console.log("constructor", constructor);
       await deployContract(contractFilename, constructor);
       setConstructorDeployed(true);
     } catch (e) {
@@ -130,8 +129,6 @@ export default function Contracts({ contractFilename }) {
     if (deployment.status !== 200) {
       throw new Error(deploymentParsed.error);
     } else {
-      console.log(deploymentParsed["contract"]);
-
       setContractAddress(deploymentParsed["contract"]["contract"]["address"]);
       setContract(deploymentParsed["contract"]);
     }
@@ -180,12 +177,13 @@ export default function Contracts({ contractFilename }) {
       const contractResParsed = await contractRes.json();
 
       if (contractRes.status === 200) {
-        setTransactions(
-          contractResParsed["contract"]["currentVersion"]["transactions"] ===
-            undefined
-            ? []
-            : contractResParsed["contract"]["currentVersion"]["transactions"]
-        );
+        if (Object.keys(contractResParsed).length === 0) {
+          setTransactions([]);
+        } else {
+          setTransactions(
+            contractResParsed["contract"]["currentVersion"]["transactions"]
+          );
+        }
 
         return contractResParsed["contract"];
       } else {
@@ -296,11 +294,15 @@ export default function Contracts({ contractFilename }) {
                 {abiState &&
                 contractNameState &&
                 abiState[contractNameState].filter(
-                  (constructor) => constructor.type === "constructor" && constructor.inputs.length > 0
+                  (constructor) =>
+                    constructor.type === "constructor" &&
+                    constructor.inputs.length > 0
                 ).length > 0 ? (
                   <p className="text-xl font-medium">Enter constructors:</p>
                 ) : (
-                  <p className="text-xl font-medium">Write with default constructors:</p>
+                  <p className="text-xl font-medium">
+                    Write with default constructors:
+                  </p>
                 )}
 
                 {abiState &&

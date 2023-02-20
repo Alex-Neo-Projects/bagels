@@ -13,7 +13,7 @@ async function main() {
     return;
   }
 
-  const nodeProcess = spawn('node', ['startServer.js', serverToLookIn], {cwd: serverDir})
+  const nodeProcess = spawn('nodemon', ['startServer.js', serverToLookIn], {cwd: serverDir})
 
   nodeProcess.stdout.on('data', (data) => {
     if (data.toString().includes('server started and listening for requests')) {
