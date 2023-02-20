@@ -528,8 +528,8 @@ async function deployContracts(abis, bytecodes, constructor) {
       let param = constructor[currentIndex][0]
       let type = constructor[currentIndex][1]
 
-      if (type === 'string') deploymentString += "'" + param + "'"
-      else if (type === 'address') deploymentString += "'" + param + "'"
+      if (type === 'string') deploymentString += `"${param}"`
+      else if (type === 'address') deploymentString += `"${param}"`
       else deploymentString += param
 
       // Add commas if there are multiple params
