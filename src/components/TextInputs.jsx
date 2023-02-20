@@ -143,17 +143,15 @@ export function TextInputs({
   function convertWeiToEth(weiValue) {
     try {
       const converted = ethers.utils.formatEther(weiValue);
-      return converted;
-    } catch (e) {
-    }
+      return converted.toString();
+    } catch (e) {}
   }
 
   function convertEthToWei(ethValue) {
     try {
       const converted = ethers.utils.parseEther(ethValue);
-      return converted;
-    } catch (e) {
-    }
+      return converted.toString();
+    } catch (e) {}
   }
 
   return (
@@ -183,7 +181,9 @@ export function TextInputs({
             <InputBox
               inputType={"text"}
               inputPlaceholder={"Enter amount (wei)"}
-              onInputFunction={(e) => setAmount(parseFloat(e.target.value) || null)}
+              onInputFunction={(e) =>
+                setAmount(parseFloat(e.target.value) || null)
+              }
               value={amount}
             />
             <button
@@ -247,7 +247,7 @@ export function TextInputs({
                   params: inputs,
                   stateMutability: val.stateMutability,
                   type: val.type,
-                  amount: amount,
+                  amount: isWei ? amount : convertEthToWei(amount),
                 }),
               });
 
