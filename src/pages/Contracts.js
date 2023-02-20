@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { TextInputs } from '../components/TextInputs'
-import Header from '../components/Header'
-import { SERVER_URL } from '../constants'
+import { useEffect, useState } from "react";
+import { TextInputs } from "../components/TextInputs";
+import Header from "../components/Header";
+import { SERVER_URL } from "../constants";
 import {
   keywordStyleColoredTitle,
   plainTitleStyle,
@@ -15,125 +15,125 @@ import {
   parameterNameStyle,
   commaStyle,
   buttonBackgroundColor,
-} from '../theme'
-import { Transaction } from '../components/Transaction'
-import { ethers } from 'ethers'
+} from "../theme";
+import { Transaction } from "../components/Transaction";
+import { ethers } from "ethers";
 
 export default function Contracts({ contractFilename }) {
-  const [contract, setContract] = useState(null)
-  const [balances, setBalances] = useState(null)
-  const [abiState, setAbiState] = useState(null)
-  const [hasConstructor, setHasConstructor] = useState(false)
-  const [constructorDeployed, setConstructorDeployed] = useState(false)
-  const [contractAddress, setContractAddress] = useState(null)
+  const [contract, setContract] = useState(null);
+  const [balances, setBalances] = useState(null);
+  const [abiState, setAbiState] = useState(null);
+  const [hasConstructor, setHasConstructor] = useState(false);
+  const [constructorDeployed, setConstructorDeployed] = useState(false);
+  const [contractAddress, setContractAddress] = useState(null);
 
-  const [transactions, setTransactions] = useState([])
-  const [contractNameState, setContractNameState] = useState(null)
+  const [transactions, setTransactions] = useState([]);
+  const [contractNameState, setContractNameState] = useState(null);
 
-  const [listening, setListening] = useState(false)
-  const [error, setError] = useState(null)
+  const [listening, setListening] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!listening) {
-      const events = new EventSource(`${SERVER_URL}/subscribeToChanges`)
+      const events = new EventSource(`${SERVER_URL}/subscribeToChanges`);
 
       events.onmessage = async (event) => {
         if (event) {
-          const message = JSON.parse(event.data)
+          const message = JSON.parse(event.data);
 
           try {
-            if (message.msg === 'redeployed') {
-              clear()
-              await init()
+            if (message.msg === "redeployed") {
+              clear();
+              await init();
             } else if (message.error) {
-              throw new Error(message.error)
+              throw new Error(message.error);
             }
           } catch (e) {
-            setError(e)
+            setError(e);
           }
         } else {
-          throw new Error('Unable to get event message')
+          throw new Error("Unable to get event message");
         }
-      }
+      };
 
-      setListening(true)
+      setListening(true);
     }
-  }, [listening])
+  }, [listening]);
 
   function clear() {
-    setConstructorDeployed(false)
-    setError(null)
-    setContract(null)
-    setBalances(null)
-    setAbiState(null)
-    setTransactions([])
-    setContractNameState(null)
+    setConstructorDeployed(false);
+    setError(null);
+    setContract(null);
+    setBalances(null);
+    setAbiState(null);
+    setTransactions([]);
+    setContractNameState(null);
   }
 
   async function init() {
     try {
-      await getBalance()
-      const contract = await getContract()
+      await getBalance();
+      const contract = await getContract();
 
-      const { returnedAbi } = await getABI()
+      const { returnedAbi } = await getABI();
 
       let hasConstructor =
         Object.values(returnedAbi)
           .flat(2)
-          .filter((curr) => curr.type === 'constructor')?.length > 0
+          .filter((curr) => curr.type === "constructor")?.length > 0;
 
       if (hasConstructor) {
-        setHasConstructor(true)
-        return
+        setHasConstructor(true);
+        return;
       }
 
-      await deployContract(contractFilename, [])
+      await deployContract(contractFilename, []);
     } catch (e) {
-      throw new Error(e.message)
+      throw new Error(e.message);
     }
   }
 
   async function getBalance() {
     const balance = await fetch(`${SERVER_URL}/balances`, {
-      method: 'GET',
-    })
+      method: "GET",
+    });
 
-    const jsonifiedBalance = await balance.json()
+    const jsonifiedBalance = await balance.json();
 
-    setBalances({ balances: jsonifiedBalance })
+    setBalances({ balances: jsonifiedBalance });
   }
 
   async function TextInputDeployContract(constructor) {
     try {
-      console.log('constructor', constructor);
-      await deployContract(contractFilename, constructor)
-      setConstructorDeployed(true)
+      console.log("constructor", constructor);
+      await deployContract(contractFilename, constructor);
+      setConstructorDeployed(true);
     } catch (e) {
-      setError(e)
+      setError(e);
     }
   }
 
   async function deployContract(contractFilename, constructor) {
     const deployment = await fetch(`${SERVER_URL}/deployContract`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         contractFilename: contractFilename,
         constructor: constructor,
       }),
-    })
+    });
 
-    const deploymentParsed = await deployment.json()
+    const deploymentParsed = await deployment.json();
 
     if (deployment.status !== 200) {
-      throw new Error(deploymentParsed.error)
+      throw new Error(deploymentParsed.error);
     } else {
-      console.log(deploymentParsed['contract']);
+      console.log(deploymentParsed["contract"]);
 
-      setContractAddress(deploymentParsed['contract']['contract']['address'])
-      setContract(deploymentParsed['contract'])
+      setContractAddress(deploymentParsed["contract"]["contract"]["address"]);
+      setContract(deploymentParsed["contract"]);
     }
   }
 
@@ -142,29 +142,29 @@ export default function Contracts({ contractFilename }) {
       const abiAndBytecode = await fetch(
         `${SERVER_URL}/abi?contractName=${contractFilename}`,
         {
-          method: 'GET',
-        },
-      )
+          method: "GET",
+        }
+      );
 
-      const jsonifiedAbiAndBytecode = await abiAndBytecode.json()
+      const jsonifiedAbiAndBytecode = await abiAndBytecode.json();
 
       if (abiAndBytecode.status === 200) {
         const contractNameFromAbi = Object.keys(
-          jsonifiedAbiAndBytecode['abi'],
-        )[0]
+          jsonifiedAbiAndBytecode["abi"]
+        )[0];
 
-        setContractNameState(contractNameFromAbi)
-        setAbiState(jsonifiedAbiAndBytecode['abi'])
+        setContractNameState(contractNameFromAbi);
+        setAbiState(jsonifiedAbiAndBytecode["abi"]);
 
         return {
-          returnedAbi: jsonifiedAbiAndBytecode['abi'],
-          bytecode: jsonifiedAbiAndBytecode['bytecode'],
-        }
+          returnedAbi: jsonifiedAbiAndBytecode["abi"],
+          bytecode: jsonifiedAbiAndBytecode["bytecode"],
+        };
       } else {
-        throw new Error(jsonifiedAbiAndBytecode.error)
+        throw new Error(jsonifiedAbiAndBytecode.error);
       }
     } catch (e) {
-      throw new Error(e.message)
+      throw new Error(e.message);
     }
   }
 
@@ -173,33 +173,33 @@ export default function Contracts({ contractFilename }) {
       const contractRes = await fetch(
         `${SERVER_URL}/getCurrentContract?contractFilename=${contractFilename}`,
         {
-          method: 'GET',
-        },
-      )
+          method: "GET",
+        }
+      );
 
-      const contractResParsed = await contractRes.json()
+      const contractResParsed = await contractRes.json();
 
       if (contractRes.status === 200) {
         setTransactions(
-          contractResParsed['contract']['currentVersion']['transactions'] ===
+          contractResParsed["contract"]["currentVersion"]["transactions"] ===
             undefined
             ? []
-            : contractResParsed['contract']['currentVersion']['transactions'],
-        )
+            : contractResParsed["contract"]["currentVersion"]["transactions"]
+        );
 
-        return contractResParsed['contract']
+        return contractResParsed["contract"];
       } else {
-        throw new Error('Unable to fetch contract')
+        throw new Error("Unable to fetch contract");
       }
     } catch (e) {
-      throw new Error(e.message)
+      throw new Error(e.message);
     }
   }
 
   function renderFunctionHeader(val) {
-    let header = ''
+    let header = "";
     switch (val.type) {
-      case 'function':
+      case "function":
         return (
           <div>
             <p className={keywordStyleColored}>function</p>
@@ -212,8 +212,8 @@ export default function Contracts({ contractFilename }) {
               {val.stateMutability}
             </p>
           </div>
-        )
-      case 'receive':
+        );
+      case "receive":
         // Note: receive (fallback) functions can't have a parameter
         return (
           <div>
@@ -224,11 +224,11 @@ export default function Contracts({ contractFilename }) {
               {val.stateMutability}
             </p>
           </div>
-        )
-      case 'constructor':
+        );
+      case "constructor":
         // Don't need to show the constructor on the next page
-        break
-      case 'fallback':
+        break;
+      case "fallback":
         return (
           <div>
             <p className={`${keywordStyleColored}`}>fallback</p>
@@ -238,16 +238,16 @@ export default function Contracts({ contractFilename }) {
               {val.stateMutability}
             </p>
           </div>
-        )
+        );
       default:
-        ''
+        "";
     }
 
-    return header
+    return header;
   }
 
   function inputsToString(valInputs) {
-    if (!valInputs) return ''
+    if (!valInputs) return "";
 
     const param = valInputs.map((input, idx) => {
       if (input) {
@@ -258,16 +258,16 @@ export default function Contracts({ contractFilename }) {
             >{`${input.type}`}</p>
             <p className={`${parameterNameStyle}`}>{`${input.name}`}</p>
             <p className={`${commaStyle} inline`}>{`${
-              valInputs.length - 1 === idx ? '' : ', '
+              valInputs.length - 1 === idx ? "" : ", "
             }`}</p>
           </div>
-        )
+        );
       } else {
-        return ''
+        return "";
       }
-    })
+    });
 
-    return param
+    return param;
   }
 
   return (
@@ -278,7 +278,7 @@ export default function Contracts({ contractFilename }) {
             {error && (
               <div className="justify-start items-start pt-1 w-full">
                 <p className="text-md text-bold text-center pl-3 pr-3 p-3 border border-1 border-[#FF0057] text-[#FF0057] rounded-lg">
-                  {error?.message || ''}
+                  {error?.message || ""}
                 </p>
               </div>
             )}
@@ -293,11 +293,20 @@ export default function Contracts({ contractFilename }) {
 
             {hasConstructor && !constructorDeployed && !contract ? (
               <div className="flex flex-col justify-start space-y-4">
-                <p className="text-xl font-medium">Enter constructors:</p>
+                {abiState &&
+                contractNameState &&
+                abiState[contractNameState].filter(
+                  (constructor) => constructor.type === "constructor" && constructor.inputs.length > 0
+                ).length > 0 ? (
+                  <p className="text-xl font-medium">Enter constructors:</p>
+                ) : (
+                  <p className="text-xl font-medium">Write with default constructors:</p>
+                )}
+
                 {abiState &&
                   contractNameState &&
                   abiState[contractNameState]
-                    .filter((constructor) => constructor.type === 'constructor')
+                    .filter((constructor) => constructor.type === "constructor")
                     .map((val, idx) => {
                       return (
                         <TextInputs
@@ -310,7 +319,7 @@ export default function Contracts({ contractFilename }) {
                           deployContract={TextInputDeployContract}
                           getContract={getContract}
                         />
-                      )
+                      );
                     })}
               </div>
             ) : (
@@ -323,14 +332,14 @@ export default function Contracts({ contractFilename }) {
                           contract
                         </h1>
                         <h1 className={plainTitleStyle}>
-                          {contractNameState || ''}
+                          {contractNameState || ""}
                         </h1>
                       </div>
 
                       <div className="flex flex-col space-y-2">
                         <div className="space-y-1">
                           <p className={plainSubtitleStyle}>Contract Address</p>
-                          <p className={subheading}>{contractAddress || ''}</p>
+                          <p className={subheading}>{contractAddress || ""}</p>
                         </div>
                       </div>
 
@@ -346,7 +355,7 @@ export default function Contracts({ contractFilename }) {
                       <div className="flex flex-col space-y-1">
                         <p className={plainSubtitleStyle}>Token Balance</p>
                         <p className={subheading}>
-                          ETH: {balances.balances.eth || '0'}
+                          ETH: {balances.balances.eth || "0"}
                         </p>
                       </div>
 
@@ -355,7 +364,7 @@ export default function Contracts({ contractFilename }) {
                           {abiState &&
                             contractNameState &&
                             abiState[contractNameState]
-                              .filter((input) => input.type !== 'constructor')
+                              .filter((input) => input.type !== "constructor")
                               .reverse()
                               .map((val, idx) => {
                                 return (
@@ -375,7 +384,7 @@ export default function Contracts({ contractFilename }) {
                                       getContract={getContract}
                                     />
                                   </div>
-                                )
+                                );
                               })}
                         </div>
                       </div>
@@ -406,7 +415,7 @@ export default function Contracts({ contractFilename }) {
                           return (
                             ethers.utils.getAddress(transaction.receipt.to) ===
                             contractAddress
-                          )
+                          );
                         })
                         .map((val, idx) => {
                           return (
@@ -417,12 +426,12 @@ export default function Contracts({ contractFilename }) {
                                 transactions.filter(
                                   (transaction) =>
                                     ethers.utils.getAddress(
-                                      transaction.receipt.to,
-                                    ) === contractAddress,
+                                      transaction.receipt.to
+                                    ) === contractAddress
                                 ).length
                               }
                             />
-                          )
+                          );
                         })
                     ) : (
                       <div className="pt-4">
@@ -439,5 +448,5 @@ export default function Contracts({ contractFilename }) {
         </div>
       </div>
     </Header>
-  )
+  );
 }
