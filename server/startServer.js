@@ -41,7 +41,6 @@ app.get('/solidityFiles', async (req, res) => {
 
     return res.status(200).send({ files: solidityFiles})
   } catch (e) {
-
     return res.status(500).send({ error: e.message })
   }
 })
@@ -240,7 +239,6 @@ app.post('/executeTransaction', async (req, res) => {
 
     return res.status(200).send({ output: [txRes.result] })
   } catch (e) {
-    // console.log('error here? ', e)
     return res.status(500).send({ error: e.message })
   }
 })
@@ -264,6 +262,7 @@ app.get('/subscribeToChanges', async (req, res) => {
 app.get('/getCurrentContract', async (req, res) => {
   try {
     const { contractFilename } = req.query
+
     if (!contractFilename) {
       throw new Error('No contract filename provided')
     }
@@ -528,8 +527,8 @@ async function deployContracts(abis, bytecodes, constructor) {
       let param = constructor[currentIndex][0]
       let type = constructor[currentIndex][1]
 
-      if (type === 'string') deploymentString += "'" + param + "'"
-      else if (type === 'address') deploymentString += "'" + param + "'"
+      if (type === 'string') deploymentString += `"${param}"`
+      else if (type === 'address') deploymentString += `"${param}"`
       else deploymentString += param
 
       // Add commas if there are multiple params
@@ -543,7 +542,6 @@ async function deployContracts(abis, bytecodes, constructor) {
 
     return [factory, contract]
   } catch (e) {
-    console.log('deployment error: ', e);
     return [null, null]
   }
 }
