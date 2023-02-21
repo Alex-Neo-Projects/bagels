@@ -204,14 +204,10 @@ app.post('/executeTransaction', async (req, res) => {
         // For some reason, the tx fail logs are always empty, so I haven't been able to 
         // get the revert reason.
         txRes['error'] = {'message': 'Transaction failed (reverted)'};
-      } else {
-        const decoded = decodeFunctionResult(iface, functionName, txRes.result);
-        
+      } 
+      else {        
         let txOutput = '';
 
-        if (decoded) { 
-          txOutput += 'Output: ' + decodeFunctionResult(iface, functionName, txRes.result) + '\n\n';
-        }
         txOutput += `Transaction hash: ${txHash}`
 
         txRes.result = txOutput;
@@ -278,7 +274,6 @@ app.listen(PORT, () => console.log('server started and listening for requests'))
 
 function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
-
   let finalResult = '';
   for (var index = 0; index < functionResult.length; index++) {
     finalResult += functionResult[index].toString()
