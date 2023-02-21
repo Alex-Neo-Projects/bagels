@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity =0.7.0;
+pragma solidity >0.5.0;
 
 contract TestContract { 
-  string private theGreeting = 'sdfsd sssssfdfdf'; 
-  string public newVar = 'asdfasdfa';
+  address[] pools; 
 
-  function greeting2() public view returns (string memory) { 
-    return theGreeting;
-  }
-
-  function greeting() public view returns (string memory) { 
-    return theGreeting;
-  }
-
-  function setGreeting(string memory newGreeting) public { 
-    theGreeting = newGreeting;
+  function addAddress(address newAddress) public { 
+    pools.push(newAddress);
   }
 }
