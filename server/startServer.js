@@ -65,8 +65,6 @@ app.post('/deployContract', async (req, res) => {
     if (firstDeploy || constructor.length > 0) {
       const [abis, byteCodes] = await compileContract(contractFilename)
 
-      fs.writeFileSync('file.txt', JSON.stringify(byteCodes))
-      
       let tempContract
       if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(

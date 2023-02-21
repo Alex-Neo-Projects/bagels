@@ -20,6 +20,14 @@ export function startupAnvil() {
         'https://eth-mainnet.g.alchemy.com/v2/YKOGR_zFYv0ouTsGab24VKwOm5w7k6QZ',
       ]
     }
+    else if (workerData['network'] === 'polygon') { 
+      console.log('Forking polygon plz wait...');
+
+      args = [
+        '--fork-url',
+        'https://polygon-mainnet.g.alchemy.com/v2/fZritfEhq_gYVJ8cV97PHgwVUm9V_Dnx',
+      ]
+    }
     else { 
       console.log(`Forking network: ${workerData['network']} is not an option.`)
       console.log(`Bagels only supports forking mainnet with: bagels --fork mainnet\n`)
