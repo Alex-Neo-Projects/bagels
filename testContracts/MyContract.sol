@@ -6,12 +6,12 @@ contract BasicContract {
   // string public newVar = 'asdfasdfa';
   // uint256 amount = 0; 
 
-  event TestEvent(uint256 tester); 
+  event TestEvent(uint256 tester, string test, uint256 indexed asdfasdfasdf); 
 
   constructor(string memory test) {}
 
   function greeting1() public returns (uint256) { 
-    // emit TestEvent(1);
+    emit TestEvent(1, "asdf", 10000);
     return 11234;
   }
 
