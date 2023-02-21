@@ -20,10 +20,15 @@ npm i -g bagels
 1) `cd` into your project's root directory
 2) Type: `bagels`
 
-You can also fork mainnet with: 
+You can also fork mainnet or polygon with: 
 ```
 bagels --fork mainnet
 ```
+
+```
+bagels --fork polygon
+```
+
 ## Community & support: 
 
 Join our [discord](https://discord.gg/DC77fxj3ks)!
