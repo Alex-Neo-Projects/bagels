@@ -170,32 +170,26 @@ app.post("/executeTransaction", async (req, res) => {
       throw new Error("Error: Couldn't deploy contract.");
     }
 
-    // Need to use eth_call RPC function for view only functions
-    if (
+    txRes = await callContractFunction(paramData);
+
+    let output = "";
+    if (txRes["error"]) {
+      output += txRes["error"]["message"];
+    } else {
+      const decodedResult = decodeFunctionResult(iface, functionName, txRes.result);
+
+      if (decodedResult.length > 0) 
+        output += "Output: " + decodeFunctionResult(iface, functionName, txRes.result);
+    }
+
+    // Send transaction
+    if (!( 
       stateMutability === "pure" ||
       stateMutability === "view" ||
       stateMutability === "constant"
-    ) {
-      txRes = await callContractFunction(paramData);
-
-      // No tx receipt returned by eth_call since it's not modifying state.
-      txReceipt = null;
-
-      let output = "";
-      if (txRes["error"]) {
-        output += txRes["error"]["message"];
-      } else {
-        output +=
-          "Output: " + decodeFunctionResult(iface, functionName, txRes.result);
-      }
-
-      txRes.result = output;
-    }
-    // If it's a write function, we need to use the send_transaction RPC call
-    else {
+    )) {
       txRes = await sendTransaction(paramData);
 
-      let txHash = txRes.result;
       txReceipt = await getTransaction(txRes.result);
 
       let logs = txReceipt.result.logs;
@@ -210,11 +204,9 @@ app.post("/executeTransaction", async (req, res) => {
         // get the revert reason.
         txRes["error"] = { message: "Transaction failed (reverted)" };
       } else {
-        let txOutput = "";
-
         // parsedLogs map to output [{parsed_logs}]
         if (logs.length > 0) {
-          txOutput += `Event Emmited: ${parsedLogs.map((log) => {
+          output += `\nEvent Emmited: ${parsedLogs.map((log) => {
             let numEvents = log.eventFragment.inputs.length;
             let args = `(${log.args
               .slice(0, numEvents)
@@ -223,9 +215,6 @@ app.post("/executeTransaction", async (req, res) => {
             return args;
           })}`;
         }
-
-        // txOutput += `Transaction hash: ${txHash}`;
-        txRes.result = txOutput;
       }
 
       // Store transaction in contract history
@@ -240,11 +229,16 @@ app.post("/executeTransaction", async (req, res) => {
         },
         receipt: txReceipt ? txReceipt.result : null,
       };
-
+  
       contracts[contractFilename]["currentVersion"]["transactions"].push(
         txData
       );
+
+      let txHash = txRes.result;
+      output += `\nTx hash: ${txHash}\n`;
     }
+
+    txRes.result = output;
 
     if (txRes.error) {
       return res.status(500).send({ error: txRes.error.message });
