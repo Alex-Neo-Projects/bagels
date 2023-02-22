@@ -26,7 +26,7 @@ const FOUNDRY_HOME_DIR = `${homedir}/.foundry`;
 
 function installAnvilNonWindows() {
   let downloadLink = `https://github.com/${FOUNDRYUP_REPO}/foundry/releases/download/${FOUNDRYUP_TAG}/foundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.tar.gz`;
-
+	
   try {
     execSync(`curl -L ${downloadLink} | tar -xzC ${FOUNDRY_HOME_DIR}`, {
       shell: true,
