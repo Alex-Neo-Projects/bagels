@@ -235,7 +235,7 @@ app.post("/executeTransaction", async (req, res) => {
       );
 
       let txHash = txRes.result;
-      output += `\nTx hash: ${txHash}\n`;
+      output += `Tx hash: ${txHash}\n`;
     }
 
     txRes.result = output;
