@@ -19,7 +19,8 @@
     "devNetwork": "node ./network/startNetwork.js",
     "siteEsBuild": "node esbuildConfig.js",
     "site": "npm-run-all --parallel siteEsBuild tailwind",
-    "dev": "npm-run-all --parallel devNetwork tailwind"
+    "dev": "npm-run-all --parallel devNetwork tailwind",
+    "preinstall": "node ./preinstall.js"
   },
   "bin": {
     "bagels": "./network/startNetwork.js"
