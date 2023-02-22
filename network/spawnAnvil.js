@@ -3,6 +3,7 @@ import { spawn } from 'child_process'
 import { kill } from 'process'
 import { isMainThread, parentPort, workerData } from 'worker_threads'
 import { getFilepath, getPathDirname } from '../utils.js';
+import { homedir } from 'os';
 
 let anvilProcessGlobal
 
@@ -34,7 +35,8 @@ export function startupAnvil() {
     }
   }
 
-  const nodeProcess = spawn('./anvil', args, { cwd: anvilDir})
+  let foundryHomeDir = `${homedir}/.foundry/`;
+  const nodeProcess = spawn('./anvil', args, { cwd: foundryHomeDir })
 
   nodeProcess.stdout.on('data', (data) => {
     parentPort.postMessage('started')
