@@ -288,8 +288,28 @@ app.listen(PORT, () =>
 function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
   let finalResult = "";
+
   for (var index = 0; index < functionResult.length; index++) {
-    finalResult += functionResult[index].toString();
+    // If the output is: '' (empty string), show that in the UI!
+    if (functionResult[index] === '') { 
+      finalResult += "\"\"";
+    }
+
+    if (typeof functionResult[index] === 'object') {
+      // This is helpful for things that *can't* get stringified with .toString()
+      // Examples: arrays like []
+      if (functionResult[index].toString() === '') {
+        finalResult += JSON.stringify(functionResult[index]);
+      }
+      // BUT if something can be stringified with .toString() we should do that. 
+      // Examples: bigNumber.toString() returns a regular number!!
+      else { 
+        finalResult += functionResult[index].toString();
+      }
+    }
+    else { 
+      finalResult += functionResult[index].toString();
+    }
 
     if (functionResult.length > 1 && index !== functionResult.length - 1) {
       finalResult += ", ";
