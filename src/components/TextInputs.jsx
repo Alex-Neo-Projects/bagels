@@ -140,19 +140,19 @@ export function TextInputs({
     setExecutionError();
   }
 
-  function convertWeiToEth(weiValue) {
-    try {
-      const converted = ethers.utils.formatEther(weiValue);
-      return converted.toString();
-    } catch (e) {}
-  }
+  // function convertWeiToEth(weiValue) {
+  //   try {
+  //     const converted = ethers.utils.formatEther(weiValue);
+  //     return converted.toString();
+  //   } catch (e) {}
+  // }
 
-  function convertEthToWei(ethValue) {
-    try {
-      const converted = ethers.utils.parseEther(ethValue);
-      return converted.toString();
-    } catch (e) {}
-  }
+  // function convertEthToWei(ethValue) {
+  //   try {
+  //     const converted = ethers.utils.parseEther(ethValue);
+  //     return converted.toString();
+  //   } catch (e) {}
+  // }
 
   return (
     <div
@@ -186,7 +186,7 @@ export function TextInputs({
               }
               value={amount}
             />
-            <button
+            {/* <button
               onClick={() => {
                 setIsWei(!isWei);
 
@@ -203,7 +203,7 @@ export function TextInputs({
               className={`text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`}
             >
               <p className="text-sm">Convert to {isWei ? "Wei" : "ETH"}</p>
-            </button>
+            </button> */}
           </>
         )}
 
@@ -247,7 +247,8 @@ export function TextInputs({
                   params: inputs,
                   stateMutability: val.stateMutability,
                   type: val.type,
-                  amount: isWei ? amount : convertEthToWei(amount),
+                  // amount: isWei ? amount : convertEthToWei(amount),
+                  amount: amount,
                 }),
               });
 

@@ -29,7 +29,7 @@ async function main() {
         `Forking network: ${workerData["network"]} is not an option.`
       );
       console.log(
-        `Bagels only supports forking mainnet with: bagels --fork mainnet\n`
+        `Bagels only supports forking mainnet or polygon with: bagels --fork mainnet and bagels --fork polygon\n`
       );
     }
   }

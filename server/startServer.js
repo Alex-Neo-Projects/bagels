@@ -173,7 +173,7 @@ app.post("/executeTransaction", async (req, res) => {
     let txReceipt;
 
     // Convert the value to a hex value since the frontend sends ints
-    let hexAmount = amount ? amount.toString(16) : "0x0";
+    let hexAmount = amount ? '0x' + amount.toString(16) : "0x0";
 
     let paramData = {
       from: wallet.address,
@@ -196,7 +196,7 @@ app.post("/executeTransaction", async (req, res) => {
       const decodedResult = decodeFunctionResult(iface, functionName, txRes);
 
       if (decodedResult.length > 0)
-        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}`;
+        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}\n`;
     } catch (e) {
       errorOutput += e.message;
     }
