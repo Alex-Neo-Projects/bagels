@@ -26,6 +26,7 @@ export default function Contracts({ contractFilename }) {
   const [hasConstructor, setHasConstructor] = useState(false);
   const [constructorDeployed, setConstructorDeployed] = useState(false);
   const [contractAddress, setContractAddress] = useState(null);
+  const [walletAddress, setWalletAddress] = useState(null)
 
   const [transactions, setTransactions] = useState([]);
   const [contractNameState, setContractNameState] = useState(null);
@@ -72,6 +73,7 @@ export default function Contracts({ contractFilename }) {
 
   async function init() {
     try {
+      await getWalletAddress();
       await getBalance();
       await getContract();
 
@@ -194,6 +196,28 @@ export default function Contracts({ contractFilename }) {
     }
   }
 
+  async function getWalletAddress() {
+    try {
+      const walletRes = await fetch(
+        `${SERVER_URL}/getWalletAddress`,
+        {
+          method: "GET",
+        }
+      );
+
+      const walletResParsed = await walletRes.json();
+
+      if (walletRes.status === 200) {
+        setWalletAddress(walletResParsed["address"])
+        return walletResParsed["address"];
+      } else {
+        throw new Error("Unable to fetch wallet address");
+      }
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
+
   function renderFunctionHeader(val) {
     let header = "";
     switch (val.type) {
@@ -209,6 +233,13 @@ export default function Contracts({ contractFilename }) {
             <p className={`${stateMutabilityStyle} ml-1`}>
               {val.stateMutability}
             </p>
+
+            {/* Show payable tooltip to say that all inputs are in wei */}
+            {val.stateMutability === 'payable' && (
+              <div className={`inline text-lg font-bold ml-1`}>
+                <img src={require('../assets/tooltip.png')} className="inline hover:cursor-grab" style={{height: 19}} onClick={() => alert('All payable inputs are in wei')}/>
+              </div>
+            )}
           </div>
         );
       case "receive":
@@ -349,7 +380,7 @@ export default function Contracts({ contractFilename }) {
                         <div className="space-y-1">
                           <p className={plainSubtitleStyle}>Wallet address</p>
                           <p className={subheading}>
-                            0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+                            {walletAddress || ''}
                           </p>
                         </div>
                       </div>

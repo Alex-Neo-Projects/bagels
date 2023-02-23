@@ -7,13 +7,29 @@ import chokidar from "chokidar";
 import path from "path";
 import fetch from "node-fetch";
 import { getPragmaSolidity } from "./parseSolcVersion.js";
+import Ganache from "ganache";
 
-const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
-// hardcoded private key from one of the anvil wallets
-const wallet = new ethers.Wallet(
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-  provider
-);
+// Receives the forking url
+let networkUrl = process.argv[3];
+
+let ganacheProvider = Ganache.provider({
+  wallet: {
+    defaultBalance: 100000,
+  },
+  logging: {
+    debug: false,
+    verbose: false,
+    quiet: true,
+  },
+  ...(networkUrl.length > 0 && { fork: { url: networkUrl || undefined } }), // Conditionally add the Fork object if network url exists
+});
+
+const provider = new ethers.providers.Web3Provider(ganacheProvider);
+
+const wallets = ganacheProvider.getInitialAccounts();
+const selectedWallet = wallets[Object.keys(wallets)[0]];
+
+const wallet = new ethers.Wallet(selectedWallet.secretKey, provider);
 
 // Need to pass it in because process.cwd() after this is ran from the worker prints the location of the bagels package on the user's computer
 // So we pass in the directory the user is calling bagel from
@@ -65,7 +81,7 @@ app.post("/deployContract", async (req, res) => {
     if (firstDeploy || constructor.length > 0) {
       const [abis, byteCodes] = await compileContract(contractFilename);
 
-      let tempContract
+      let tempContract;
       if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(
           abis,
@@ -157,7 +173,7 @@ app.post("/executeTransaction", async (req, res) => {
     let txReceipt;
 
     // Convert the value to a hex value since the frontend sends ints
-    let hexAmount = amount ? amount.toString(16) : "0x0";
+    let hexAmount = amount ? '0x' + amount.toString(16) : "0x0";
 
     let paramData = {
       from: wallet.address,
@@ -170,81 +186,91 @@ app.post("/executeTransaction", async (req, res) => {
       throw new Error("Error: Couldn't deploy contract.");
     }
 
-    txRes = await callContractFunction(paramData);
-
+    // Send a eth_call transaction
+    // We use this to see outputs for functions with returns & view access modifier
     let output = "";
-    if (txRes["error"]) {
-      output += txRes["error"]["message"];
-    } else {
-      const decodedResult = decodeFunctionResult(iface, functionName, txRes.result);
+    let errorOutput = "";
+    try {
+      txRes = await callContractFunction(paramData);
 
-      if (decodedResult.length > 0) 
-        output += "Output: " + decodeFunctionResult(iface, functionName, txRes.result);
+      const decodedResult = decodeFunctionResult(iface, functionName, txRes);
+
+      if (decodedResult.length > 0)
+        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}\n`;
+    } catch (e) {
+      errorOutput += e.message;
     }
 
     // Send transaction
-    if (!( 
-      stateMutability === "pure" ||
-      stateMutability === "view" ||
-      stateMutability === "constant"
-    )) {
-      txRes = await sendTransaction(paramData);
+    if (
+      !(
+        stateMutability === "pure" ||
+        stateMutability === "view" ||
+        stateMutability === "constant"
+      )
+    ) {
+      try {
+        txRes = await sendTransaction(paramData);
+        txReceipt = await getTransaction(txRes);
 
-      txReceipt = await getTransaction(txRes.result);
+        let logs = txReceipt.logs;
+        let parsedLogs = logs.map((log) => iface.parseLog(log));
 
-      let logs = txReceipt.result.logs;
-      let parsedLogs = logs.map((log) => iface.parseLog(log));
+        // 0 === failed tx
+        // 1 === succeesed
+        const txStatus = parseInt(txReceipt.status, 16);
 
-      // 0 === failed tx
-      // 1 === succeesed
-      const txStatus = parseInt(txReceipt.result.status, 16);
-
-      if (txStatus === 0) {
-        // For some reason, the tx fail logs are always empty, so I haven't been able to
-        // get the revert reason.
-        txRes["error"] = { message: "Transaction failed (reverted)" };
-      } else {
-        // parsedLogs map to output [{parsed_logs}]
-        if (logs.length > 0) {
-          output += `\nEvent Emmited: ${parsedLogs.map((log) => {
-            let numEvents = log.eventFragment.inputs.length;
-            let args = `(${log.args
-              .slice(0, numEvents)
-              .map((arg) => arg.toString())
-              .join(", ")})`;
-            return args;
-          })}`;
+        if (txStatus === 0) {
+          // For some reason, the tx fail logs are always empty, so I haven't been able to
+          // get the revert reason.
+          throw new Error("Transaction failed (reverted)");
+        } else {
+          // parsedLogs map to output [{parsed_logs}]
+          if (logs.length > 0) {
+            output += `Event Emmited: ${parsedLogs.map((log) => {
+              let numEvents = log.eventFragment.inputs.length;
+              let args = `(${log.args
+                .slice(0, numEvents)
+                .map((arg) => arg.toString())
+                .join(", ")})`;
+              return args;
+            })}\n`;
+          }
         }
+
+        // Store transaction in contract history
+        let txData = {
+          paramData: {
+            functionName: functionName,
+            params: params,
+            stateMutability: stateMutability,
+            type: type,
+            amount: amount,
+            rawData: functionEncodedSignature,
+          },
+          receipt: txReceipt ? txReceipt : null,
+        };
+
+        contracts[contractFilename]["currentVersion"]["transactions"].push(
+          txData
+        );
+
+        output += `Tx hash: ${txRes}\n`;
+
+        let gasCosts = await estimateGas(paramData);
+        let parsedGasCost = parseInt(gasCosts, 16);
+
+        output += `Gas used: ${parsedGasCost} gwei`;
+      } catch (e) {
+        errorOutput += `\n${e.message}`;
       }
-
-      // Store transaction in contract history
-      let txData = {
-        paramData: {
-          functionName: functionName,
-          params: params,
-          stateMutability: stateMutability,
-          type: type,
-          amount: amount,
-          rawData: functionEncodedSignature,
-        },
-        receipt: txReceipt ? txReceipt.result : null,
-      };
-  
-      contracts[contractFilename]["currentVersion"]["transactions"].push(
-        txData
-      );
-
-      let txHash = txRes.result;
-      output += `Tx hash: ${txHash}\n`;
     }
 
-    txRes.result = output;
-
-    if (txRes.error) {
-      return res.status(500).send({ error: txRes.error.message });
+    if (errorOutput.length > 0) {
+      return res.status(500).send({ error: errorOutput });
     }
 
-    return res.status(200).send({ output: [txRes.result] });
+    return res.status(200).send({ output: output });
   } catch (e) {
     return res.status(500).send({ error: e.message });
   }
@@ -279,41 +305,81 @@ app.get("/getCurrentContract", async (req, res) => {
   }
 });
 
+app.get("/getWalletAddress", async (req, res) => {
+  try {
+    const address = wallet.address;
+    return res.status(200).send({ address: address });
+  } catch (e) {
+    return res.status(500).send({ error: e.message });
+  }
+});
+
 // Note: do not delete this, the console.log is needed by spawnBackend.js
 // because this is the signal that the server is up and running!
 app.listen(PORT, () =>
   console.log("server started and listening for requests")
 );
 
+function parseOutputAndConvertToString(input) {
+  let finalResult = "";
+
+  // If the output is: '' (empty string), show that in the UI!
+  if (input === "") {
+    finalResult += '""';
+  }
+
+  if (typeof input === "object") {
+    // This is helpful for things that *can't* get stringified with .toString()
+    // Examples: arrays like []
+    if (input.toString() === "") {
+      finalResult += JSON.stringify(input);
+    }
+    // BUT if something can be stringified with .toString() we should do that.
+    // Examples: bigNumber.toString() returns a regular number!!
+    else {
+      finalResult += input.toString();
+    }
+  } else {
+    finalResult += input.toString();
+  }
+
+  return finalResult;
+}
+
+function addCommaToStringIfNeeded(functionResult, index) {
+  if (functionResult.length > 1 && index !== functionResult.length - 1) {
+    return ", ";
+  } else {
+    return "";
+  }
+}
+
 function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
   let finalResult = "";
 
   for (var index = 0; index < functionResult.length; index++) {
-    // If the output is: '' (empty string), show that in the UI!
-    if (functionResult[index] === '') { 
-      finalResult += "\"\"";
+    let parsedInput = "";
+
+    if (Array.isArray(functionResult[index])) {
+      if (functionResult[index].length === 0) {
+        parsedInput += JSON.stringify([]);
+      } else {
+        // Loop thru
+        functionResult[index].map((item, mapIndex) => {
+          parsedInput += parseOutputAndConvertToString(item);
+          parsedInput += addCommaToStringIfNeeded(
+            functionResult[index],
+            mapIndex
+          );
+        });
+      }
+    } else {
+      parsedInput = parseOutputAndConvertToString(functionResult[index]);
     }
 
-    if (typeof functionResult[index] === 'object') {
-      // This is helpful for things that *can't* get stringified with .toString()
-      // Examples: arrays like []
-      if (functionResult[index].toString() === '') {
-        finalResult += JSON.stringify(functionResult[index]);
-      }
-      // BUT if something can be stringified with .toString() we should do that. 
-      // Examples: bigNumber.toString() returns a regular number!!
-      else { 
-        finalResult += functionResult[index].toString();
-      }
-    }
-    else { 
-      finalResult += functionResult[index].toString();
-    }
-
-    if (functionResult.length > 1 && index !== functionResult.length - 1) {
-      finalResult += ", ";
-    }
+    parsedInput += addCommaToStringIfNeeded(functionResult, index);
+    finalResult += parsedInput;
   }
 
   return finalResult;
@@ -332,23 +398,34 @@ function createNewContract(filename, abis, contract) {
 
 async function sendTransaction(params) {
   try {
-    const txRes = await fetch(`http://127.0.0.1:8545`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_sendTransaction",
-        params: [params],
-        id: 1,
-      }),
+    const txRes = await ganacheProvider.request({
+      method: "eth_sendTransaction",
+      params: [params],
     });
+    // console.log("eth_sendTransaction: ",txRes);
 
-    if (txRes.status === 200) {
-      return await txRes.json();
+    if (txRes) {
+      return txRes;
     } else {
-      throw new Error("Unable to send tx");
+      throw new Error("Unable to send tx (eth_sendTransaction)");
+    }
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
+async function estimateGas(params) {
+  try {
+    const txRes = await ganacheProvider.request({
+      method: "eth_estimateGas",
+      params: [params],
+    });
+    // console.log("eth_estimateGas: ",txRes);
+
+    if (txRes) {
+      return txRes;
+    } else {
+      throw new Error("Unable to estimate gas (eth_estimateGas)");
     }
   } catch (e) {
     throw new Error(e.message);
@@ -357,48 +434,43 @@ async function sendTransaction(params) {
 
 async function callContractFunction(params) {
   try {
-    const txRes = await fetch(`http://127.0.0.1:8545`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_call",
-        params: [params],
-        id: 1,
-      }),
+    const txRes = await ganacheProvider.request({
+      method: "eth_call",
+      params: [params],
     });
+    // console.log("eth_call: ",txRes);
 
-    if (txRes.status === 200) {
-      return await txRes.json();
+    if (txRes) {
+      return txRes;
     } else {
-      throw new Error("Unable to send tx");
+      throw new Error("Unable to send tx (eth_call)");
     }
   } catch (e) {
     throw new Error(e.message);
   }
 }
 
+// Accepts string!
+function gweiToEth(input) {
+  // Convert gwei --> wei
+  const wei = ethers.utils.parseUnits(input, "gwei");
+  const eth = ethers.utils.formatEther(wei);
+
+  return eth;
+}
+
 async function getTransaction(txHash) {
   try {
-    const txRes = await fetch(`http://127.0.0.1:8545`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_getTransactionReceipt",
-        params: [txHash],
-        id: 1,
-      }),
+    const txRes = await ganacheProvider.request({
+      method: "eth_getTransactionReceipt",
+      params: [txHash],
     });
+    // console.log("eth_getTransactionReceipt: ", txRes);
 
-    if (txRes.status === 200) {
-      return await txRes.json();
+    if (txRes) {
+      return txRes;
     } else {
-      throw new Error("Unable to get tx");
+      throw new Error("Unable to get tx (eth_getTransactionReceipt)");
     }
   } catch (e) {
     throw new Error(e.message);

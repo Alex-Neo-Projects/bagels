@@ -1,7 +1,7 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { SERVER_URL } from "../constants";
+import { SERVER_URL, uintTypes, intTypes } from "../constants";
 import { buttonBackgroundColor, buttonTextColor } from "../theme";
 import { InputBox } from "./InputBox";
 
@@ -37,78 +37,8 @@ export function TextInputs({
     setInputs(inputsCopy);
   }
 
-  // TODO: Make this work for a variety of types like addresses,
   function validateInputs() {
     let newError;
-
-    const uintTypes = [
-      "uint8",
-      "uint16",
-      "uint24",
-      "uint32",
-      "uint40",
-      "uint48",
-      "uint56",
-      "uint64",
-      "uint72",
-      "uint80",
-      "uint88",
-      "uint96",
-      "uint104",
-      "uint112",
-      "uint120",
-      "uint128",
-      "uint136",
-      "uint144",
-      "uint152",
-      "uint160",
-      "uint168",
-      "uint176",
-      "uint184",
-      "uint192",
-      "uint200",
-      "uint208",
-      "uint216",
-      "uint224",
-      "uint232",
-      "uint240",
-      "uint248",
-      "uint256",
-    ];
-    const intTypes = [
-      "int8",
-      "int16",
-      "int24",
-      "int32",
-      "int40",
-      "int48",
-      "int56",
-      "int64",
-      "int72",
-      "int80",
-      "int88",
-      "int96",
-      "int104",
-      "int112",
-      "int120",
-      "int128",
-      "int136",
-      "int144",
-      "int152",
-      "int160",
-      "int168",
-      "int176",
-      "int184",
-      "int192",
-      "int200",
-      "int208",
-      "int216",
-      "int224",
-      "int232",
-      "int240",
-      "int248",
-      "int256",
-    ];
 
     if (val.inputs.length !== inputs.length)
       newError = "Please fill out all inputs";
@@ -140,19 +70,19 @@ export function TextInputs({
     setExecutionError();
   }
 
-  function convertWeiToEth(weiValue) {
-    try {
-      const converted = ethers.utils.formatEther(weiValue);
-      return converted.toString();
-    } catch (e) {}
-  }
+  // function convertWeiToEth(weiValue) {
+  //   try {
+  //     const converted = ethers.utils.formatEther(weiValue);
+  //     return converted.toString();
+  //   } catch (e) {}
+  // }
 
-  function convertEthToWei(ethValue) {
-    try {
-      const converted = ethers.utils.parseEther(ethValue);
-      return converted.toString();
-    } catch (e) {}
-  }
+  // function convertEthToWei(ethValue) {
+  //   try {
+  //     const converted = ethers.utils.parseEther(ethValue);
+  //     return converted.toString();
+  //   } catch (e) {}
+  // }
 
   return (
     <div
@@ -186,7 +116,7 @@ export function TextInputs({
               }
               value={amount}
             />
-            <button
+            {/* <button
               onClick={() => {
                 setIsWei(!isWei);
 
@@ -203,7 +133,7 @@ export function TextInputs({
               className={`text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`}
             >
               <p className="text-sm">Convert to {isWei ? "Wei" : "ETH"}</p>
-            </button>
+            </button> */}
           </>
         )}
 
@@ -247,16 +177,17 @@ export function TextInputs({
                   params: inputs,
                   stateMutability: val.stateMutability,
                   type: val.type,
-                  amount: isWei ? amount : convertEthToWei(amount),
+                  // amount: isWei ? amount : convertEthToWei(amount),
+                  amount: amount,
                 }),
               });
 
               const jsonParsed = await res.json();
               if (res.status === 200) {
-                setOutput(jsonParsed["output"] || " ");
+                setOutput(jsonParsed["output"] || "");
                 getContract();
               } else if (res.status === 500) {
-                setExecutionError(JSON.stringify(jsonParsed["error"]));
+                setExecutionError(jsonParsed["error"] || "");
               }
 
               setTimeout(() => {
@@ -286,19 +217,9 @@ export function TextInputs({
           <p className="text-md font-bold">Transaction Successful</p>
           <div className="flex flex-row justify-start items-center space-x-4 w-full">
             <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-              {output.map((res, idx) => {
-                return (
-                  <>
-                    <p
-                      key={idx.toString()}
-                      style={{ whiteSpace: "pre-line" }}
-                      className="text-sm"
-                    >
-                      {res}
-                    </p>
-                  </>
-                );
-              })}
+              <p style={{ whiteSpace: "pre-line" }} className="text-sm">
+                {output}
+              </p>
             </div>
           </div>
         </div>

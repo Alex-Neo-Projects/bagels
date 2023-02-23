@@ -6,13 +6,14 @@ import { getFilepath, getPathDirname } from "../utils.js";
 import { PostHog } from "posthog-node";
 import os from "os";
 import { platform } from "node:process";
-import { execSync, spawnSync } from "child_process";
+import { execSync } from "child_process";
 
 const PLATFORM = platform;
 
 const client = new PostHog("phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4", {
   host: "https://app.posthog.com",
 });
+
 let children = [];
 
 async function workerPromise(script, data) {
@@ -57,7 +58,6 @@ function checkIfRunning() {
       }
 
       return true
-      break;
     case "win32":
       // backend
       try {
@@ -74,7 +74,6 @@ function checkIfRunning() {
       }
 
       return true
-      break;
     default:
       console.log("Unable to check platform, moving on!");
       return true
@@ -100,7 +99,6 @@ async function main() {
 
   try {
     let filePaths = {
-      anvilPath: getFilepath([getPathDirname(), "network", "spawnAnvil.js"]),
       backendPath: getFilepath([
         getPathDirname(),
         "network",
@@ -117,18 +115,9 @@ async function main() {
       forkNetwork = process.argv[process.argv.indexOf("--fork") + 1];
     }
 
-    const anvilWorker = await workerPromise(filePaths.anvilPath, {
-      network: forkNetwork,
+    const backendWorker = await workerPromise(filePaths.backendPath, {
+      network: forkNetwork
     });
-
-    if (!anvilWorker) {
-      console.log("Unable to start Anvil");
-      process.exit(1);
-    }
-
-    children.push(anvilWorker);
-
-    const backendWorker = await workerPromise(filePaths.backendPath);
     if (!backendWorker) {
       console.log("Unable to start the backend");
       process.exit(1);
