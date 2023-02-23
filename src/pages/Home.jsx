@@ -57,10 +57,10 @@ export default function Home() {
             className={`text-white block border border-[#93939328] rounded-2xl h-full w-full p-6 pl-4 pr-4 space-y-4`}
           >
             <div className="flex flex-row items-center max-w-prose">
-              <p className="text-2xl tracking-tighter text-left font-bold">
+              <p className="text-2xl tracking-tighter text-left font-bold pr-2">
                 Select a contract
               </p>
-              <img src={require('../assets/tooltip.png')} className="pl-2 hover:cursor-grab" style={{height: 25}} onClick={() => alert('This is a list of contracts found in the directory you ran `bagels` in (not including interface or library contracts)')}/>
+              <img src={require('../assets/tooltip.png')} className="hover:cursor-grab" style={{height: 25}} onClick={() => alert("This is a list of contracts found in the directory you ran `bagels` in (not including interface or library contracts)")}/>
             </div>
 
             {loading && (
