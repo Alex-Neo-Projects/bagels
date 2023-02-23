@@ -37,30 +37,28 @@ function installAnvilNonWindows() {
   }
 }
 
-function intallAnvilWindows() {
+function installAnvilWindows() {
 	try{
 	}catch(e){
 		throw new Error(e.message)
 	}
 }
 
-function checkAnvilDir() {
-	try{
-			if(existsSync(FOUNDRY_HOME_DIR)) {
-				throw new Error('Anvil exists already!')
-			}else{
-				mkdirSync(FOUNDRY_HOME_DIR)
-			}
-	}catch(e){
-		throw new Error(e.message)
+function anvilDirExists() {
+	if(existsSync(FOUNDRY_HOME_DIR)) {
+		return true;
+	}else{
+		mkdirSync(FOUNDRY_HOME_DIR)
+		return false;
 	}
 }
 
 function installAnvil() {
-	try{
-		checkAnvilDir(); 
-	}catch(e){
-		throw new Error(e.message)
+	const isAnvilInstalled = anvilDirExists(); 
+
+	if (isAnvilInstalled) { 
+		console.log('Found existing anvil installation!');
+		return;
 	}
 
   switch (PLATFORM) {
@@ -74,7 +72,7 @@ function installAnvil() {
       break;
     case "win32":
 			try{
-				intallAnvilWindows()
+				installAnvilWindows()
 			}catch(e){
 				throw new Error(e.message)
 			}
@@ -86,6 +84,7 @@ function installAnvil() {
 
 async function main() {
 	try{
+		console.log(FOUNDRY_HOME_DIR);
 		installAnvil();
 	}catch(e){
 		console.error(e.message)
