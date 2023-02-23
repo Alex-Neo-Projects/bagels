@@ -64,11 +64,15 @@ function checkIfRunning() {
       }
       break;
     case "win32":
+      // anvil 
       try {
-        execSync("netstat -ti tcp:1274 | xargs kill");
+        // execSync("netstat -ti tcp:1274 | xargs kill");
       } catch (e) {
         throw new Error(e.message)
       }
+
+      // backend
+      // frontend
       break;
     default:
       console.log("Unable to check platform, moving on!");
