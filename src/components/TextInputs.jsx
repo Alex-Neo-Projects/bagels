@@ -253,10 +253,10 @@ export function TextInputs({
 
               const jsonParsed = await res.json();
               if (res.status === 200) {
-                setOutput(jsonParsed["output"] || " ");
+                setOutput(jsonParsed["output"] || "");
                 getContract();
               } else if (res.status === 500) {
-                setExecutionError(JSON.stringify(jsonParsed["error"]));
+                setExecutionError(jsonParsed["error"] || "");
               }
 
               setTimeout(() => {
@@ -286,19 +286,9 @@ export function TextInputs({
           <p className="text-md font-bold">Transaction Successful</p>
           <div className="flex flex-row justify-start items-center space-x-4 w-full">
             <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-              {output.map((res, idx) => {
-                return (
-                  <>
-                    <p
-                      key={idx.toString()}
-                      style={{ whiteSpace: "pre-line" }}
-                      className="text-sm"
-                    >
-                      {res}
-                    </p>
-                  </>
-                );
-              })}
+              <p style={{ whiteSpace: "pre-line" }} className="text-sm">
+                {output}
+              </p>
             </div>
           </div>
         </div>
