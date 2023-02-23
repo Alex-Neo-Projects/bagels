@@ -42,37 +42,35 @@ function checkIfRunning() {
   switch (PLATFORM) {
     case "linux":
     case "darwin":
-      // anvil
-      try {
-        execSync("lsof -ti tcp:8545 | xargs kill");
-      } catch (e) {
-        throw new Error(e.message)
-      }
-
       // backend
       try {
         execSync("lsof -ti tcp:9090 | xargs kill");
       } catch (e) {
-        throw new Error(e.message)
+        throw new Error(e.message);
       }
 
       // frontend
       try {
         execSync("lsof -ti tcp:1274 | xargs kill");
       } catch (e) {
-        throw new Error(e.message)
+        throw new Error(e.message);
       }
       break;
     case "win32":
-      // anvil 
+      // backend
       try {
-        // execSync("netstat -ti tcp:1274 | xargs kill");
+        //netstat -l -p
+        //netstat -na | find "1234"
+        execSync("netstat -l -p | grep 9090", { shell: "powershell.exe" });
       } catch (e) {
-        throw new Error(e.message)
+        throw new Error(e.message);
       }
 
-      // backend
       // frontend
+      try {
+      } catch (e) {
+        throw new Error(e.message);
+      }
       break;
     default:
       console.log("Unable to check platform, moving on!");
@@ -84,75 +82,77 @@ async function main() {
     checkIfRunning();
   } catch (e) {
     console.error(e.message);
-    process.exit(1)
+    process.exit(1);
   }
 
   try {
     let filePaths = {
-      anvilPath: getFilepath([getPathDirname(), 'network', 'spawnAnvil.js']),
+      anvilPath: getFilepath([getPathDirname(), "network", "spawnAnvil.js"]),
       backendPath: getFilepath([
         getPathDirname(),
-        'network',
-        'spawnBackend.js',
+        "network",
+        "spawnBackend.js",
       ]),
-      frontendPath: getFilepath([getPathDirname(), 'network', 'spawnUI.js']),
-    }
+      frontendPath: getFilepath([getPathDirname(), "network", "spawnUI.js"]),
+    };
 
     let forkNetwork;
 
     // Only args is forking
-    if (process.argv.indexOf('--fork') >= 0) {
+    if (process.argv.indexOf("--fork") >= 0) {
       // Just get whatever is after --fork
-      forkNetwork = process.argv[process.argv.indexOf('--fork') + 1];
+      forkNetwork = process.argv[process.argv.indexOf("--fork") + 1];
     }
 
-    const anvilWorker = await workerPromise(filePaths.anvilPath, {'network': forkNetwork})
+    const anvilWorker = await workerPromise(filePaths.anvilPath, {
+      network: forkNetwork,
+    });
 
     if (!anvilWorker) {
-      console.log('Unable to start Anvil')
-      process.exit(1)
+      console.log("Unable to start Anvil");
+      process.exit(1);
     }
 
-    children.push(anvilWorker)
+    children.push(anvilWorker);
 
-    const backendWorker = await workerPromise(filePaths.backendPath)
+    const backendWorker = await workerPromise(filePaths.backendPath);
     if (!backendWorker) {
-      console.log('Unable to start the backend')
-      process.exit(1)
+      console.log("Unable to start the backend");
+      process.exit(1);
     }
 
-    children.push(backendWorker)
+    children.push(backendWorker);
 
-    const uiWorker = await workerPromise(filePaths.frontendPath)
+    const uiWorker = await workerPromise(filePaths.frontendPath);
     if (!uiWorker) {
-      console.log('Unable to start frontend')
-      process.exit(1)
+      console.log("Unable to start frontend");
+      process.exit(1);
     }
-    children.push(uiWorker)
+    children.push(uiWorker);
 
     // Capture bagels starts
     client.capture({
       distinctId: os.userInfo().username,
-      event: 'bagels-started'
-    })
+      event: "bagels-started",
+    });
 
     // Start Local Host
-    open('http://localhost:9091/')
+    open("http://localhost:9091/");
   } catch (e) {
-    console.error(e.message)
-    process.exit(1)
+    console.error(e.message);
+    process.exit(1);
   }
 
-  process.on('SIGINT', () => {
-    console.log("\n🥯 Closing Bagels!")
+  process.on("SIGINT", () => {
+    console.log("\n🥯 Closing Bagels!");
     if (children.length >= 1) {
       children.forEach((child) => {
-        kill(child, 'SIGTERM')
-      })
-      children = []
+        kill(child, "SIGTERM");
+      });
+      children = [];
     }
-    process.exit(1)
-  })
+    process.exit(1);
+  });
 }
 
 main();
