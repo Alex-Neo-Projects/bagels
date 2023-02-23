@@ -12,18 +12,6 @@ const ARCHITECTURE = arch === 'x64' ? "amd64" : "arm64";
 
 const FOUNDRY_HOME_DIR = `${homedir}/.foundry`;
 
-// function installAnvilViaCurl() {
-//   try {
-//     execSync("curl -L https://foundry.paradigm.xyz | bash", { shell: true });
-//     execSync("foundryup", { shell: true });
-
-//     return true;
-//   } catch (e) {
-//     console.error(e.message);
-//     return false;
-//   }
-// }
-
 function installAnvilNonWindows() {
   let downloadLink = `https://github.com/${FOUNDRYUP_REPO}/foundry/releases/download/${FOUNDRYUP_TAG}/foundry_${FOUNDRYUP_VERSION}_${PLATFORM}_${ARCHITECTURE}.tar.gz`;
 	
