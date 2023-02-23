@@ -8,7 +8,7 @@ const FOUNDRYUP_REPO = "foundry-rs";
 const FOUNDRYUP_TAG = "nightly-edf15abd648bb96e2bcee342c1d72ec7d1066cd1";
 const FOUNDRYUP_VERSION = "nightly";
 const PLATFORM = platform;
-const ARCHITECTURE = arch;
+const ARCHITECTURE = arch === 'x64' ? "amd64" : "arm64";
 
 const FOUNDRY_HOME_DIR = `${homedir}/.foundry`;
 
