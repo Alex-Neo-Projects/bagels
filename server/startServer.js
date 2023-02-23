@@ -189,7 +189,6 @@ app.post("/executeTransaction", async (req, res) => {
       stateMutability === "constant"
     )) {
       txRes = await sendTransaction(paramData);
-
       txReceipt = await getTransaction(txRes.result);
 
       let logs = txReceipt.result.logs;
@@ -236,6 +235,11 @@ app.post("/executeTransaction", async (req, res) => {
 
       let txHash = txRes.result;
       output += `Tx hash: ${txHash}\n`;
+
+      let gasCosts = await estimateGas(paramData);
+      let parsedGasCost = parseInt(gasCosts.result, 16);
+
+      output += 'Gas used: ' + parsedGasCost + ' gwei';
     }
 
     txRes.result = output;
@@ -285,35 +289,65 @@ app.listen(PORT, () =>
   console.log("server started and listening for requests")
 );
 
+function parseOutputAndConvertToString(input) {
+  let finalResult = "";
+
+  // If the output is: '' (empty string), show that in the UI!
+  if (input === '') { 
+    finalResult += "\"\"";
+  }
+
+  if (typeof input === 'object') {
+    // This is helpful for things that *can't* get stringified with .toString()
+    // Examples: arrays like []
+    if (input.toString() === '') {
+      finalResult += JSON.stringify(input);
+    }
+    // BUT if something can be stringified with .toString() we should do that. 
+    // Examples: bigNumber.toString() returns a regular number!!
+    else { 
+      finalResult += input.toString();
+    }
+  }
+  else { 
+    finalResult += input.toString();
+  }
+
+  return finalResult; 
+}
+
+function addCommaToStringIfNeeded(functionResult, index) {
+  if (functionResult.length > 1 && index !== functionResult.length - 1) {
+    return ", ";
+  } else {
+    return "";
+  }
+}
+
 function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
   let finalResult = "";
 
   for (var index = 0; index < functionResult.length; index++) {
-    // If the output is: '' (empty string), show that in the UI!
-    if (functionResult[index] === '') { 
-      finalResult += "\"\"";
-    }
+    let parsedInput = "";
 
-    if (typeof functionResult[index] === 'object') {
-      // This is helpful for things that *can't* get stringified with .toString()
-      // Examples: arrays like []
-      if (functionResult[index].toString() === '') {
-        finalResult += JSON.stringify(functionResult[index]);
+    if (Array.isArray(functionResult[index])) { 
+      if (functionResult[index].length === 0) { 
+        parsedInput += JSON.stringify([]);
       }
-      // BUT if something can be stringified with .toString() we should do that. 
-      // Examples: bigNumber.toString() returns a regular number!!
       else { 
-        finalResult += functionResult[index].toString();
+        // Loop thru
+        functionResult[index].map((item, mapIndex) => {
+          parsedInput += parseOutputAndConvertToString(item); 
+          parsedInput += addCommaToStringIfNeeded(functionResult[index], mapIndex);
+        });
       }
-    }
-    else { 
-      finalResult += functionResult[index].toString();
+    } else { 
+      parsedInput = parseOutputAndConvertToString(functionResult[index]);
     }
 
-    if (functionResult.length > 1 && index !== functionResult.length - 1) {
-      finalResult += ", ";
-    }
+    parsedInput += addCommaToStringIfNeeded(functionResult, index);
+    finalResult += parsedInput;
   }
 
   return finalResult;
@@ -355,6 +389,31 @@ async function sendTransaction(params) {
   }
 }
 
+async function estimateGas(params) { 
+  try {
+    const txRes = await fetch(`http://127.0.0.1:8545`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_estimateGas",
+        params: [params],
+        id: 1,
+      }),
+    });
+
+    if (txRes.status === 200) {
+      return await txRes.json();
+    } else {
+      throw new Error("Unable to send tx");
+    }
+  } catch (e) {
+    throw new Error(e.message);
+  }
+}
+
 async function callContractFunction(params) {
   try {
     const txRes = await fetch(`http://127.0.0.1:8545`, {
@@ -378,6 +437,15 @@ async function callContractFunction(params) {
   } catch (e) {
     throw new Error(e.message);
   }
+}
+
+// Accepts string!
+function gweiToEth(input) { 
+  // Convert gwei --> wei 
+  const wei = ethers.utils.parseUnits(input, 'gwei');
+  const eth = ethers.utils.formatEther(wei);
+
+  return eth;
 }
 
 async function getTransaction(txHash) {
