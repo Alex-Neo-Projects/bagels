@@ -131,6 +131,30 @@ app.get("/balances", async (req, res) => {
   }
 });
 
+function parseParams(params) { 
+  let returnVal = []; 
+
+  try { 
+    params.map((param) => { 
+      try {
+        const arr = JSON.parse(param[0]);
+        if (Array.isArray(arr)) {
+          returnVal.push(arr)
+        }
+        else { 
+          returnVal.push(param[0])
+        }
+      } catch (e) {
+        console.log('err parsing: ', e);
+      }
+    });
+  } catch (e) { 
+    console.log('error: ', e);
+  }
+
+  return returnVal; 
+}
+
 app.post("/executeTransaction", async (req, res) => {
   try {
     const {
@@ -165,9 +189,9 @@ app.post("/executeTransaction", async (req, res) => {
       )
     );
 
-    const functionEncodedSignature = iface.encodeFunctionData(functionName, [
-      ...params.map((param) => param[0]),
-    ]);
+    const parsedParams = parseParams(params);
+
+    const functionEncodedSignature = iface.encodeFunctionData(functionName, parsedParams);
 
     let txRes;
     let txReceipt;
@@ -320,7 +344,7 @@ app.listen(PORT, () =>
   console.log("server started and listening for requests")
 );
 
-function parseOutputAndConvertToString(input) {
+function parseOutputAndConvertToCorrectType(input) {
   let finalResult = "";
 
   // If the output is: '' (empty string), show that in the UI!
@@ -328,7 +352,21 @@ function parseOutputAndConvertToString(input) {
     finalResult += '""';
   }
 
-  if (typeof input === "object") {
+  if (ethers.BigNumber.isBigNumber(input)) { 
+    let convertedBigNumber = input.toString(); 
+
+    // Convert to int if it's an int
+    if (parseInt(convertedBigNumber)) { 
+      convertedBigNumber = parseInt(convertedBigNumber);
+      
+      // Return int value: 
+      return convertedBigNumber
+    }
+
+    // If it's not an int, return the string value
+    finalResult += convertedBigNumber;
+  }
+  else if (typeof input === "object") {
     // This is helpful for things that *can't* get stringified with .toString()
     // Examples: arrays like []
     if (input.toString() === "") {
@@ -339,7 +377,8 @@ function parseOutputAndConvertToString(input) {
     else {
       finalResult += input.toString();
     }
-  } else {
+  } 
+   else {
     finalResult += input.toString();
   }
 
@@ -358,30 +397,31 @@ function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
   let finalResult = "";
 
+  console.log(functionResult);
+
   for (var index = 0; index < functionResult.length; index++) {
     let parsedInput = "";
-
+    
     if (Array.isArray(functionResult[index])) {
-      if (functionResult[index].length === 0) {
-        parsedInput += JSON.stringify([]);
-      } else {
-        // Loop thru
-        functionResult[index].map((item, mapIndex) => {
-          parsedInput += parseOutputAndConvertToString(item);
-          parsedInput += addCommaToStringIfNeeded(
-            functionResult[index],
-            mapIndex
-          );
-        });
-      }
+      let returnArr = [];
+
+      functionResult[index].map((item, mapIndex) => {
+        const parsedOutput = parseOutputAndConvertToCorrectType(item); 
+
+        returnArr.push(parsedOutput); 
+      });
+
+      parsedInput = JSON.stringify(returnArr);
     } else {
-      parsedInput = parseOutputAndConvertToString(functionResult[index]);
+      parsedInput = parseOutputAndConvertToCorrectType(functionResult[index]);
     }
 
+    console.log('adding: ', parsedInput);
     parsedInput += addCommaToStringIfNeeded(functionResult, index);
     finalResult += parsedInput;
   }
 
+  console.log('final result: ', finalResult)
   return finalResult;
 }
 

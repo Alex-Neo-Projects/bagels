@@ -17,7 +17,7 @@ export function TextInputs({
 }) {
   const [inputs, setInputs] = useState([]);
   const [amount, setAmount] = useState(null);
-  const [isWei, setIsWei] = useState(true);
+  // const [isWei, setIsWei] = useState(true);
   const [executingTransaction, setExecutingTransaction] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [output, setOutput] = useState(null);
@@ -166,6 +166,8 @@ export function TextInputs({
                 return;
               }
 
+              console.log('inputs from execute: ', inputs);
+              
               const res = await fetch(`${SERVER_URL}/executeTransaction`, {
                 method: "POST",
                 headers: {

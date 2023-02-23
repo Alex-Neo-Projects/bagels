@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import Header from '../components/Header'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { SERVER_URL } from '../constants.js'
-import { buttonBackgroundColor } from '../theme'
 
 export default function Home() {
   const [solidityFiles, setSolidityFiles] = useState([])
