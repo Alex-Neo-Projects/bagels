@@ -46,42 +46,56 @@ function checkIfRunning() {
       try {
         execSync("lsof -ti tcp:9090 | xargs kill");
       } catch (e) {
-        throw new Error(e.message);
+        return false
       }
 
       // frontend
       try {
         execSync("lsof -ti tcp:1274 | xargs kill");
       } catch (e) {
-        throw new Error(e.message);
+        return false
       }
+
+      return true
       break;
     case "win32":
       // backend
       try {
         execSync("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
       } catch (e) {
-        throw new Error(e.message);
+        return false
       }
 
       // frontend
       try {
         execSync("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
       } catch (e) {
-        throw new Error(e.message);
+        return false
       }
+
+      return true
       break;
     default:
       console.log("Unable to check platform, moving on!");
+      return true
   }
 }
 
 async function main() {
-  try {
-    checkIfRunning();
-  } catch (e) {
-    console.error(e.message);
-    process.exit(1);
+  if(!checkIfRunning()) {
+    console.log("Unable to start bagels, try running these commands to reset the backend and frontend: \n")
+
+    if(PLATFORM === 'win32') {
+      console.log("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }")
+      console.log("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }\n")
+    }else if(PLATFORM === 'linux' || PLATFORM === 'darwin') {
+      console.log("lsof -ti tcp:9090 | xargs kill")
+      console.log("lsof -ti tcp:1274 | xargs kill \n")
+    }else {
+      console.log("🥯 Add an issue to bagels if you see this!")
+    }
+
+    process.exit(1)
   }
 
   try {
