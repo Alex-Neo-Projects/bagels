@@ -6,6 +6,13 @@ import { getFilepath, getPathDirname } from '../utils.js'
 import { PostHog } from 'posthog-node'
 import os from 'os';
 
+
+const client = new PostHog(
+  'phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4',
+  { host: 'https://app.posthog.com' }
+)
+let children = [];
+
 async function workerPromise(script, data) {
   return await new Promise((resolve, reject) => {
     let w = new Worker(script, { workerData: data})
@@ -27,13 +34,6 @@ async function workerPromise(script, data) {
     })
   })
 }
-
-let children = [];
-
-const client = new PostHog(
-  'phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4',
-  { host: 'https://app.posthog.com' }
-)
 
 async function main() {
   try {
@@ -88,21 +88,21 @@ async function main() {
     // Start Local Host
     open('http://localhost:9091/')
   } catch (e) {
-    console.error(e)
+    console.error(e.message)
     process.exit(1)
   }
+
+  process.on('SIGINT', () => {
+    console.log("\n🥯 Closing Bagels!")
+    if (children.length >= 1) {
+      children.forEach((child) => {
+        kill(child, 'SIGTERM')
+      })
+      children = []
+    }
+    process.exit(1)
+  })
 }
 
-process.on('SIGINT', () => {
-  if (children.length >= 1) {
-    children.forEach((child) => {
-      kill(child, 'SIGTERM')
-    })
-    children = []
-  }
-})
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+main()
