@@ -72,7 +72,6 @@ function installAnvil() {
 
 async function main() {
 	try{
-		console.log(FOUNDRY_HOME_DIR);
 		installAnvil();
 	}catch(e){
 		console.error(e.message)
