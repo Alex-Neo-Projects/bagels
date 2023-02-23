@@ -9,7 +9,6 @@
     "./src/**",
     "./network/**",
     "./esbuildConfig.js",
-    "./anvil",
     "./utils.js"
   ],
   "scripts": {
