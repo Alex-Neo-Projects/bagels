@@ -233,6 +233,13 @@ export default function Contracts({ contractFilename }) {
             <p className={`${stateMutabilityStyle} ml-1`}>
               {val.stateMutability}
             </p>
+
+            {/* Show payable tooltip to say that all inputs are in wei */}
+            {val.stateMutability === 'payable' && (
+              <div className={`inline text-lg font-bold ml-1`}>
+                <img src={require('../assets/tooltip.png')} className="inline hover:cursor-grab" style={{height: 19}} onClick={() => alert('All payable inputs are in wei')}/>
+              </div>
+            )}
           </div>
         );
       case "receive":
