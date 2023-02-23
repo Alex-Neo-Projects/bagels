@@ -282,9 +282,10 @@ export default function Contracts({ contractFilename }) {
       if (input) {
         return (
           <div className="inline">
-            <p
-              className={`${parameterTypeStyle} inline mr-1`}
-            >{`${input.type}`}</p>
+            <p className={`${parameterTypeStyle} inline mr-1`}>
+              {/* ABIs usually show structs as being type tuple which is confusing */}
+              {`${input.type === 'tuple' ? 'struct' : input.type}`}
+            </p>
             <p className={`${parameterNameStyle}`}>{`${input.name}`}</p>
             <p className={`${commaStyle} inline`}>{`${
               valInputs.length - 1 === idx ? "" : ", "

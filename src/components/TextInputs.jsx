@@ -17,7 +17,7 @@ export function TextInputs({
 }) {
   const [inputs, setInputs] = useState([]);
   const [amount, setAmount] = useState(null);
-  const [isWei, setIsWei] = useState(true);
+  // const [isWei, setIsWei] = useState(true);
   const [executingTransaction, setExecutingTransaction] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [output, setOutput] = useState(null);
@@ -97,7 +97,7 @@ export function TextInputs({
             return (
               <InputBox
                 inputType={"text"}
-                inputPlaceholder={`${param.name} (${param.type})`}
+                inputPlaceholder={`${param.name} (${param.type === 'tuple' ? 'struct' : param.type})`}
                 onInputFunction={handleInputListChange.bind(this, [
                   idx,
                   param.type,
@@ -229,7 +229,7 @@ export function TextInputs({
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full">
           <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
-            <p className="text-sm">{error}</p>
+            <p className="text-sm">{error.replace(/\n/g, '<br>')}</p>
           </div>
         </div>
       )}
@@ -238,7 +238,7 @@ export function TextInputs({
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full overflow-hidden break-all">
           <p className="text-md font-bold w-10">Error</p>
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
-            <p className="text-sm">{executionError}</p>
+            <pre className="text-sm">{executionError}</pre>
           </div>
         </div>
       )}
