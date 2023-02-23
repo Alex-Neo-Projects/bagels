@@ -217,9 +217,9 @@ export function TextInputs({
           <p className="text-md font-bold">Transaction Successful</p>
           <div className="flex flex-row justify-start items-center space-x-4 w-full">
             <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-              <p style={{ whiteSpace: "pre-line" }} className="text-sm">
+              <pre style={{ whiteSpace: "pre-line" }} className="text-sm">
                 {output}
-              </p>
+              </pre>
             </div>
           </div>
         </div>
