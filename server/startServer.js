@@ -212,7 +212,7 @@ app.post("/executeTransaction", async (req, res) => {
               .map((arg) => arg.toString())
               .join(", ")})`;
             return args;
-          })}`;
+          })}\n`;
         }
       }
 
