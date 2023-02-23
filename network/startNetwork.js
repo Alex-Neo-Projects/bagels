@@ -59,15 +59,14 @@ function checkIfRunning() {
     case "win32":
       // backend
       try {
-        //netstat -l -p
-        //netstat -na | find "1234"
-        execSync("netstat -l -p | grep 9090", { shell: "powershell.exe" });
+        execSync("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
       } catch (e) {
         throw new Error(e.message);
       }
 
       // frontend
       try {
+        execSync("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
       } catch (e) {
         throw new Error(e.message);
       }
