@@ -1,41 +1,88 @@
 #!/usr/bin/env node
-import { Worker } from 'worker_threads'
-import process, { kill } from 'process'
-import open from 'open'
-import { getFilepath, getPathDirname } from '../utils.js'
-import { PostHog } from 'posthog-node'
-import os from 'os';
+import { Worker } from "worker_threads";
+import process, { kill } from "process";
+import open from "open";
+import { getFilepath, getPathDirname } from "../utils.js";
+import { PostHog } from "posthog-node";
+import os from "os";
+import { platform } from "node:process";
+import { execSync, spawnSync } from "child_process";
 
+const PLATFORM = platform;
 
-const client = new PostHog(
-  'phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4',
-  { host: 'https://app.posthog.com' }
-)
+const client = new PostHog("phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4", {
+  host: "https://app.posthog.com",
+});
 let children = [];
 
 async function workerPromise(script, data) {
   return await new Promise((resolve, reject) => {
-    let w = new Worker(script, { workerData: data})
-    let pid; 
+    let w = new Worker(script, { workerData: data });
+    let pid;
 
-    w.on('message', (message) => {
-      // This means that the worker is done *starting* 
+    w.on("message", (message) => {
+      // This means that the worker is done *starting*
       // Necessary to avoid race condition where the backend is slower to start than the frontend
       // We resolve the PID anyway though, because it's used to kill the process later
-      if (message === 'started') { 
-        resolve(pid)
+      if (message === "started") {
+        resolve(pid);
       } else {
-        pid = message; 
+        pid = message;
       }
-    })
-    w.on('error', (err) => reject(err))
-    w.on('exit', (exitCode) => {
+    });
+    w.on("error", (err) => reject(err));
+    w.on("exit", (exitCode) => {
       reject(`worker finished with exit code ${exitCode}`);
-    })
-  })
+    });
+  });
+}
+
+function checkIfRunning() {
+  // Check either anvil or backend or frontend are running
+  switch (PLATFORM) {
+    case "linux":
+    case "darwin":
+      // anvil
+      try {
+        execSync("lsof -ti tcp:8545 | xargs kill");
+      } catch (e) {
+        throw new Error(e.message)
+      }
+
+      // backend
+      try {
+        execSync("lsof -ti tcp:9090 | xargs kill");
+      } catch (e) {
+        throw new Error(e.message)
+      }
+
+      // frontend
+      try {
+        execSync("lsof -ti tcp:1274 | xargs kill");
+      } catch (e) {
+        throw new Error(e.message)
+      }
+      break;
+    case "win32":
+      try {
+        execSync("netstat -ti tcp:1274 | xargs kill");
+      } catch (e) {
+        throw new Error(e.message)
+      }
+      break;
+    default:
+      console.log("Unable to check platform, moving on!");
+  }
 }
 
 async function main() {
+  try {
+    checkIfRunning();
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1)
+  }
+
   try {
     let filePaths = {
       anvilPath: getFilepath([getPathDirname(), 'network', 'spawnAnvil.js']),
@@ -104,5 +151,4 @@ async function main() {
   })
 }
 
-
-main()
+main();
