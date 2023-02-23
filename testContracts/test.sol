@@ -13,13 +13,14 @@ contract TestContract {
 
   string setString; 
 
-  function returnStruct() public pure returns (myStruct memory) {
-    myStruct memory newStruct;
-    newStruct.name = 'hello'; 
-    newStruct.age = 123;
-
-    return newStruct;
+  function arrAddrInput(address[] memory _addr) public pure returns (address[] memory) { 
+    return _addr;
   }
+
+  function returnStruct(myStruct memory _struct) public pure returns (myStruct memory) {
+    return _struct;
+  }
+
   function testPayable() public payable returns (uint) {
     return msg.value;
   }

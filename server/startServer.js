@@ -137,7 +137,10 @@ function parseParams(params) {
   try { 
     params.map((param) => { 
       try {
-        const arr = JSON.parse(param[0]);
+        // Need to replace single quotes (if there are any) with double quotes since 'myString' is not valid json
+        let replaceSingleQuotes = param[0].replace(/'/g, '"');
+
+        const arr = JSON.parse(replaceSingleQuotes);
         if (Array.isArray(arr)) {
           returnVal.push(arr)
         }
@@ -145,11 +148,18 @@ function parseParams(params) {
           returnVal.push(param[0])
         }
       } catch (e) {
-        console.log('err parsing: ', e);
+        // Show array error
+        if (param[1] === 'address[]') {
+          throw new Error(`Couldn't parse the input: ${param[0]} \n\nPlease make sure to put the array values in a string. \n\nExample: [\"0x72E998a51472E9b6dF293FFf4ae132272711f240\"]`)
+        } else if (param[1] === 'tuple') { 
+          throw new Error(`Couldn't parse the input: ${param[0]} \n\nPossible problems: \n\n-Did you format the struct correctly? Example: ["string", 123] \n\n-Are you sure your inputs match the types of your struct? \n\n-If you're trying to input an address, use quotes around the address: ["0xCEf..."]`);
+        } else {
+          throw new Error(`Couldn't parse the input: ${param[0]} \n\nAre you sure your inputs match the type: ${param[1]}?`);
+        }
       }
     });
   } catch (e) { 
-    console.log('error: ', e);
+    throw new Error(e);
   }
 
   return returnVal; 
@@ -207,7 +217,7 @@ app.post("/executeTransaction", async (req, res) => {
     };
 
     if (!paramData.to) {
-      throw new Error("Error: Couldn't deploy contract.");
+      throw new Error("Couldn't deploy contract.");
     }
 
     // Send a eth_call transaction
@@ -397,8 +407,6 @@ function decodeFunctionResult(iface, functionName, txResult) {
   let functionResult = iface.decodeFunctionResult(functionName, txResult);
   let finalResult = "";
 
-  console.log(functionResult);
-
   for (var index = 0; index < functionResult.length; index++) {
     let parsedInput = "";
     
@@ -416,12 +424,10 @@ function decodeFunctionResult(iface, functionName, txResult) {
       parsedInput = parseOutputAndConvertToCorrectType(functionResult[index]);
     }
 
-    console.log('adding: ', parsedInput);
     parsedInput += addCommaToStringIfNeeded(functionResult, index);
     finalResult += parsedInput;
   }
 
-  console.log('final result: ', finalResult)
   return finalResult;
 }
 
@@ -442,7 +448,6 @@ async function sendTransaction(params) {
       method: "eth_sendTransaction",
       params: [params],
     });
-    // console.log("eth_sendTransaction: ",txRes);
 
     if (txRes) {
       return txRes;
@@ -460,7 +465,6 @@ async function estimateGas(params) {
       method: "eth_estimateGas",
       params: [params],
     });
-    // console.log("eth_estimateGas: ",txRes);
 
     if (txRes) {
       return txRes;
@@ -478,7 +482,6 @@ async function callContractFunction(params) {
       method: "eth_call",
       params: [params],
     });
-    // console.log("eth_call: ",txRes);
 
     if (txRes) {
       return txRes;
@@ -505,7 +508,6 @@ async function getTransaction(txHash) {
       method: "eth_getTransactionReceipt",
       params: [txHash],
     });
-    // console.log("eth_getTransactionReceipt: ", txRes);
 
     if (txRes) {
       return txRes;
