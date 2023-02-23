@@ -4,6 +4,8 @@ import { ethers } from "ethers";
 import { SERVER_URL } from "../constants";
 import { buttonBackgroundColor, buttonTextColor } from "../theme";
 import { InputBox } from "./InputBox";
+import { OutputBox } from "./OutputBox";
+import { uintTypes, intTypes } from "../constants";
 
 export function TextInputs({
   val,
@@ -40,75 +42,6 @@ export function TextInputs({
   // TODO: Make this work for a variety of types like addresses,
   function validateInputs() {
     let newError;
-
-    const uintTypes = [
-      "uint8",
-      "uint16",
-      "uint24",
-      "uint32",
-      "uint40",
-      "uint48",
-      "uint56",
-      "uint64",
-      "uint72",
-      "uint80",
-      "uint88",
-      "uint96",
-      "uint104",
-      "uint112",
-      "uint120",
-      "uint128",
-      "uint136",
-      "uint144",
-      "uint152",
-      "uint160",
-      "uint168",
-      "uint176",
-      "uint184",
-      "uint192",
-      "uint200",
-      "uint208",
-      "uint216",
-      "uint224",
-      "uint232",
-      "uint240",
-      "uint248",
-      "uint256",
-    ];
-    const intTypes = [
-      "int8",
-      "int16",
-      "int24",
-      "int32",
-      "int40",
-      "int48",
-      "int56",
-      "int64",
-      "int72",
-      "int80",
-      "int88",
-      "int96",
-      "int104",
-      "int112",
-      "int120",
-      "int128",
-      "int136",
-      "int144",
-      "int152",
-      "int160",
-      "int168",
-      "int176",
-      "int184",
-      "int192",
-      "int200",
-      "int208",
-      "int216",
-      "int224",
-      "int232",
-      "int240",
-      "int248",
-      "int256",
-    ];
 
     if (val.inputs.length !== inputs.length)
       newError = "Please fill out all inputs";
@@ -167,6 +100,7 @@ export function TextInputs({
             return (
               <InputBox
                 inputType={"text"}
+                internalType={param.internalType}
                 inputPlaceholder={`${param.name} (${param.type})`}
                 onInputFunction={handleInputListChange.bind(this, [
                   idx,
@@ -180,7 +114,7 @@ export function TextInputs({
           <>
             <InputBox
               inputType={"text"}
-              inputPlaceholder={"Enter amount (wei)"}
+              inputPlaceholder={"Enter amount (eth)"}
               onInputFunction={(e) =>
                 setAmount(parseFloat(e.target.value) || null)
               }
@@ -282,26 +216,7 @@ export function TextInputs({
       </div>
 
       {output && (
-        <div className="flex flex-col pt-4 space-y-4 w-full">
-          <p className="text-md font-bold">Transaction Successful</p>
-          <div className="flex flex-row justify-start items-center space-x-4 w-full">
-            <div className="flex flex-col w-full bg-[#93939328] border border-[#93939328] rounded-lg p-2 text-sm">
-              {output.map((res, idx) => {
-                return (
-                  <>
-                    <p
-                      key={idx.toString()}
-                      style={{ whiteSpace: "pre-line" }}
-                      className="text-sm"
-                    >
-                      {res}
-                    </p>
-                  </>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <OutputBox output={output} />
       )}
 
       {error && (
