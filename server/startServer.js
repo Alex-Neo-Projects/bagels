@@ -149,16 +149,19 @@ app.post("/executeTransaction", async (req, res) => {
       )
     );
 
-    console.log(params);
+    console.log(functionName);
 
     const functionEncodedSignature = iface.encodeFunctionData(functionName, [
       ...params.map((param) => {
-        if (param.length > 1) {
-          // If the input is an array, return the param wrapped in an array
-          if (param[1].includes('[]')) { 
-            return [param[0]]
-          }
-        }
+        console.log(param);
+
+        // if (param.length > 1) {
+        //   // If the input is an array, return the param wrapped in an array
+        //   if (param[1].includes('[]')) { 
+        //     console.log(param[0])
+        //     return param[0]
+        //   }
+        // }
   
         return param[0];
       }),
