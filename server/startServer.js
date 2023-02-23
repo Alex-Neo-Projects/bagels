@@ -137,15 +137,27 @@ function parseParams(params) {
   try { 
     params.map((param) => { 
       try {
+        if (param[1].includes('bytes')) { 
+          throw new Error('unsupported type');
+        }
+
         // Need to replace single quotes (if there are any) with double quotes since 'myString' is not valid json
         let replaceSingleQuotes = param[0].replace(/'/g, '"');
+        let isPossibleArray = /[\[\]\(\)]/;
 
-        const arr = JSON.parse(replaceSingleQuotes);
-        if (Array.isArray(arr)) {
-          returnVal.push(arr)
-        }
+        if (isPossibleArray.test(replaceSingleQuotes)) { 
+
+          const arr = JSON.parse(replaceSingleQuotes);
+          if (Array.isArray(arr)) {
+            returnVal.push(arr)
+          }
+          else { 
+            returnVal.push(param[0])
+          }
+        } 
+        // Don't want to do JSON.parse on a regular string like: "0xeb44211A7248a696D4DB7cda0ceD6aD3178E6220" since it'll just throw errors.
         else { 
-          returnVal.push(param[0])
+          returnVal.push(replaceSingleQuotes)
         }
       } catch (e) {
         // Show array error
@@ -153,6 +165,8 @@ function parseParams(params) {
           throw new Error(`Couldn't parse the input: ${param[0]} \n\nPlease make sure to put the array values in a string. \n\nExample: [\"0x72E998a51472E9b6dF293FFf4ae132272711f240\"]`)
         } else if (param[1] === 'tuple') { 
           throw new Error(`Couldn't parse the input: ${param[0]} \n\nPossible problems: \n\n-Did you format the struct correctly? Example: ["string", 123] \n\n-Are you sure your inputs match the types of your struct? \n\n-If you're trying to input an address, use quotes around the address: ["0xCEf..."]`);
+        } else if (param[1].includes('bytes')) { 
+          throw new Error(`Bagels currently doesn't support inputs of type: ${param[1]}\n\nIf this is a problem for you, please open an issue:\n\nhttps://github.com/Alex-Neo-Projects/bagels/issues`)
         } else {
           throw new Error(`Couldn't parse the input: ${param[0]} \n\nAre you sure your inputs match the type: ${param[1]}?`);
         }
@@ -230,7 +244,7 @@ app.post("/executeTransaction", async (req, res) => {
       const decodedResult = decodeFunctionResult(iface, functionName, txRes);
 
       if (decodedResult.length > 0)
-        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}\n`;
+        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}\n\n`;
     } catch (e) {
       errorOutput += e.message;
     }
@@ -268,7 +282,7 @@ app.post("/executeTransaction", async (req, res) => {
                 .map((arg) => arg.toString())
                 .join(", ")})`;
               return args;
-            })}\n`;
+            })}\n\n`;
           }
         }
 
@@ -289,7 +303,7 @@ app.post("/executeTransaction", async (req, res) => {
           txData
         );
 
-        output += `Tx hash: ${txRes}\n`;
+        output += `Tx hash: ${txRes}\n\n`;
 
         let gasCosts = await estimateGas(paramData);
         let parsedGasCost = parseInt(gasCosts, 16);

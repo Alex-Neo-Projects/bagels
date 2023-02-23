@@ -18,6 +18,7 @@ import {
 } from "../theme";
 import { Transaction } from "../components/Transaction";
 import { ethers } from "ethers";
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 export default function Contracts({ contractFilename }) {
   const [contract, setContract] = useState(null);
@@ -316,8 +317,9 @@ export default function Contracts({ contractFilename }) {
             {(!abiState || !balances) && !error && (
               <div className="max-w-lg">
                 <p className="text-md tracking-tighter text-left font-bold">
-                  Loading {contractFilename}
+                  Deploying {contractFilename}...
                 </p>
+                <LoadingSpinner />
               </div>
             )}
 
