@@ -305,6 +305,15 @@ app.get("/getCurrentContract", async (req, res) => {
   }
 });
 
+app.get("/getWalletAddress", async (req, res) => {
+  try {
+    const address = wallet.address;
+    return res.status(200).send({ address: address });
+  } catch (e) {
+    return res.status(500).send({ error: e.message });
+  }
+});
+
 // Note: do not delete this, the console.log is needed by spawnBackend.js
 // because this is the signal that the server is up and running!
 app.listen(PORT, () =>
