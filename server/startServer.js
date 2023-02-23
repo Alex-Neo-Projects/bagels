@@ -149,8 +149,19 @@ app.post("/executeTransaction", async (req, res) => {
       )
     );
 
+    console.log(params);
+
     const functionEncodedSignature = iface.encodeFunctionData(functionName, [
-      ...params.map((param) => param[0]),
+      ...params.map((param) => {
+        if (param.length > 1) {
+          // If the input is an array, return the param wrapped in an array
+          if (param[1].includes('[]')) { 
+            return [param[0]]
+          }
+        }
+  
+        return param[0];
+      }),
     ]);
 
     let txRes;
@@ -632,6 +643,7 @@ async function deployContracts(abis, bytecodes, constructor) {
         deploymentString += ",";
       }
     }
+    
     deploymentString += ")";
 
     const contract = await eval(deploymentString);
