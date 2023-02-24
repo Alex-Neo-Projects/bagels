@@ -82,6 +82,7 @@ app.post("/deployContract", async (req, res) => {
       const [abis, byteCodes] = await compileContract(contractFilename);
 
       let tempContract;
+
       if (constructor.length > 0) {
         let [factory, contract] = await deployContracts(
           abis,
@@ -93,6 +94,7 @@ app.post("/deployContract", async (req, res) => {
         let [factory, contract] = await deployContracts(abis, byteCodes, []);
         tempContract = contract;
       }
+
       const contract = createNewContract(contractFilename, abis, tempContract);
 
       contracts[contractFilename]["historicalChanges"].push(
@@ -179,6 +181,24 @@ function parseParams(params) {
   return returnVal; 
 }
 
+function getFullFunctionForEthers(functionName, params) { 
+  let fullFunction = functionName + '(';
+
+  // Need to get functions in the style: slot0(address, int24)
+  // Because ethers needs this to differentiate between that example, and the possibility of another function with the same name but different parameters.
+  // Example: slot0(address, int24) & slot0(address, int24, uint[])
+  // If we only pass in slot0 to the interface and there are two slot0's, ethers will throw an error.  
+  params.map((item, index) => { 
+    let currType = item[1];
+    fullFunction += currType
+    
+    fullFunction += addCommaToStringIfNeeded(params, index);
+  })
+
+  fullFunction += ')'
+  return fullFunction;
+}
+
 app.post("/executeTransaction", async (req, res) => {
   try {
     const {
@@ -214,8 +234,8 @@ app.post("/executeTransaction", async (req, res) => {
     );
 
     const parsedParams = parseParams(params);
-
-    const functionEncodedSignature = iface.encodeFunctionData(functionName, parsedParams);
+    const fullFunction = getFullFunctionForEthers(functionName, params);
+    const functionEncodedSignature = iface.encodeFunctionData(fullFunction, parsedParams);
 
     let txRes;
     let txReceipt;
@@ -241,10 +261,10 @@ app.post("/executeTransaction", async (req, res) => {
     try {
       txRes = await callContractFunction(paramData);
 
-      const decodedResult = decodeFunctionResult(iface, functionName, txRes);
+      const decodedResult = decodeFunctionResult(iface, fullFunction, txRes);
 
       if (decodedResult.length > 0)
-        output += `Output: ${decodeFunctionResult(iface, functionName, txRes)}\n\n`;
+        output += `Output: ${decodeFunctionResult(iface, fullFunction, txRes)}\n\n`;
     } catch (e) {
       errorOutput += e.message;
     }
