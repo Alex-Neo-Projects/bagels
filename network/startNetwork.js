@@ -5,6 +5,16 @@ import open from "open";
 import { getFilepath, getPathDirname } from "../utils.js";
 import { PostHog } from "posthog-node";
 import os from "os";
+import { platform } from "node:process";
+import { execSync } from "child_process";
+
+const PLATFORM = platform;
+
+const client = new PostHog("phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4", {
+  host: "https://app.posthog.com",
+});
+
+let children = [];
 
 async function workerPromise(script, data) {
   return await new Promise((resolve, reject) => {
@@ -28,16 +38,67 @@ async function workerPromise(script, data) {
   });
 }
 
-let children = [];
+function checkIfRunning() {
+  // Check either anvil or backend or frontend are running
+  switch (PLATFORM) {
+    case "linux":
+    case "darwin":
+      // backend
+      try {
+        execSync("lsof -ti tcp:9090 | xargs kill");
+      } catch (e) {
+        return false
+      }
 
-const client = new PostHog("phc_XmppwnWycFgtoeRJR93d1QaiYtZ4CPSJs4Dts5uTRm4", {
-  host: "https://app.posthog.com",
-});
+      // frontend
+      try {
+        execSync("lsof -ti tcp:1274 | xargs kill");
+      } catch (e) {
+        return false
+      }
+
+      return true
+    case "win32":
+      // backend
+      try {
+        execSync("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
+      } catch (e) {
+        return false
+      }
+
+      // frontend
+      try {
+        execSync("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
+      } catch (e) {
+        return false
+      }
+
+      return true
+    default:
+      console.log("Unable to check platform, moving on!");
+      return true
+  }
+}
 
 async function main() {
+  if(!checkIfRunning()) {
+    console.log("Unable to start bagels, try running these commands to reset the backend and frontend: \n")
+
+    if(PLATFORM === 'win32') {
+      console.log("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }")
+      console.log("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }\n")
+    }else if(PLATFORM === 'linux' || PLATFORM === 'darwin') {
+      console.log("lsof -ti tcp:9090 | xargs kill")
+      console.log("lsof -ti tcp:1274 | xargs kill \n")
+    }else {
+      console.log("🥯 Add an issue to bagels if you see this!")
+    }
+
+    process.exit(1)
+  }
+
   try {
     let filePaths = {
-      ganachePath: getFilepath([getPathDirname(), "network", "spawnGanache.js"]),
       backendPath: getFilepath([
         getPathDirname(),
         "network",
@@ -80,21 +141,20 @@ async function main() {
     // Start Local Host
     open("http://localhost:9091/");
   } catch (e) {
-    console.error(e);
+    console.error(e.message);
     process.exit(1);
   }
+
+  process.on("SIGINT", () => {
+    console.log("\n🥯 Closing Bagels!");
+    if (children.length >= 1) {
+      children.forEach((child) => {
+        kill(child, "SIGTERM");
+      });
+      children = [];
+    }
+    process.exit(1);
+  });
 }
 
-process.on("SIGINT", () => {
-  if (children.length >= 1) {
-    children.forEach((child) => {
-      kill(child, "SIGTERM");
-    });
-    children = [];
-  }
-});
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main();
