@@ -16,7 +16,7 @@ export function TextInputs({
   getContract,
 }) {
   const [inputs, setInputs] = useState([]);
-  const [amount, setAmount] = useState(null);
+  const [amount, setAmount] = useState("");
   const [executingTransaction, setExecutingTransaction] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [output, setOutput] = useState(null);
@@ -97,7 +97,7 @@ export function TextInputs({
               inputType={"text"}
               inputPlaceholder={"Enter amount (wei)"}
               onInputFunction={(e) =>
-                setAmount(parseFloat(e.target.value) || null)
+                setAmount(parseFloat(e.target.value) || "")
               }
               value={amount}
             />
@@ -158,6 +158,7 @@ export function TextInputs({
               }
 
               setInputs([])
+              setAmount("")
 
               setTimeout(() => {
                 setExecutingTransaction(false);
