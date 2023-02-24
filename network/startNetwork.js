@@ -61,14 +61,14 @@ function checkIfRunning() {
     case "win32":
       // backend
       try {
-        execSync("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
+        execSync("(Get-NetTCPConnection -LocalPort 9090) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe", stdio: "ignore" });
       } catch (e) {
         return false
       }
 
       // frontend
       try {
-        execSync("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe" });
+        execSync("(Get-NetTCPConnection -LocalPort 1274) | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process $_ }", { shell: "powershell.exe", stdio: "ignore"});
       } catch (e) {
         return false
       }
