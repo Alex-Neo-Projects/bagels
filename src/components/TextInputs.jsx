@@ -17,7 +17,6 @@ export function TextInputs({
 }) {
   const [inputs, setInputs] = useState([]);
   const [amount, setAmount] = useState(null);
-  // const [isWei, setIsWei] = useState(true);
   const [executingTransaction, setExecutingTransaction] = useState(false);
   const [executionError, setExecutionError] = useState(null);
   const [output, setOutput] = useState(null);
@@ -31,9 +30,8 @@ export function TextInputs({
   // index[0] === the param value
   // index[1] === the param type
   function handleInputListChange(index, event) {
-    var inputsCopy = inputs.slice();
+    let inputsCopy = inputs.slice();
     inputsCopy[index[0]] = [event.target.value, index[1]];
-
     setInputs(inputsCopy);
   }
 
@@ -70,20 +68,6 @@ export function TextInputs({
     setExecutionError();
   }
 
-  // function convertWeiToEth(weiValue) {
-  //   try {
-  //     const converted = ethers.utils.formatEther(weiValue);
-  //     return converted.toString();
-  //   } catch (e) {}
-  // }
-
-  // function convertEthToWei(ethValue) {
-  //   try {
-  //     const converted = ethers.utils.parseEther(ethValue);
-  //     return converted.toString();
-  //   } catch (e) {}
-  // }
-
   return (
     <div
       className="flex flex-col justify-between items-start space-y-1 h-full "
@@ -102,6 +86,7 @@ export function TextInputs({
                   idx,
                   param.type,
                 ])}
+                value={inputs[idx] ? inputs[idx][0] : ""}
               />
             );
           })}
@@ -116,24 +101,6 @@ export function TextInputs({
               }
               value={amount}
             />
-            {/* <button
-              onClick={() => {
-                setIsWei(!isWei);
-
-                if (amount > 0) {
-                  if (isWei) {
-                    const convertedEth = convertWeiToEth(amount);
-                    setAmount(convertedEth);
-                  } else {
-                    const convertedWei = convertEthToWei(amount);
-                    setAmount(parseFloat(convertedWei));
-                  }
-                }
-              }}
-              className={`text-sm ${buttonTextColor} hover:cursor-grab flex justify-center items-center w-1/4 h-10 pl-6 pr-6 p-6 rounded-lg ${buttonBackgroundColor}`}
-            >
-              <p className="text-sm">Convert to {isWei ? "Wei" : "ETH"}</p>
-            </button> */}
           </>
         )}
 
@@ -189,6 +156,8 @@ export function TextInputs({
               } else if (res.status === 500) {
                 setExecutionError(jsonParsed["error"] || "");
               }
+
+              setInputs([])
 
               setTimeout(() => {
                 setExecutingTransaction(false);
