@@ -45,14 +45,14 @@ function checkIfRunning() {
     case "darwin":
       // backend
       try {
-        execSync("lsof -ti tcp:9090 | xargs kill");
+        execSync("lsof -ti tcp:9090 | xargs -r kill");
       } catch (e) {
         return false
       }
 
       // frontend
       try {
-        execSync("lsof -ti tcp:1274 | xargs kill");
+        execSync("lsof -ti tcp:1274 | xargs -r kill");
       } catch (e) {
         return false
       }
