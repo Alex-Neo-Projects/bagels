@@ -248,6 +248,7 @@ app.post("/executeTransaction", async (req, res) => {
       to: contracts[contractFilename]["currentVersion"]["contract"]["address"],
       value: hexAmount,
       data: functionEncodedSignature,
+      gas: 30000000
     };
 
     if (!paramData.to) {
