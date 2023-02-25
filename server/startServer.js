@@ -401,12 +401,11 @@ function parseOutputAndConvertToCorrectType(input, isArray) {
     let convertedBigNumber = input.toString(); 
 
     // Convert to int if it's an int
-    if (parseInt(convertedBigNumber)) { 
-      convertedBigNumber = parseInt(convertedBigNumber);
-      
-      // Return int value: 
-      return convertedBigNumber
-    }
+    // if (parseInt(convertedBigNumber)) { 
+    //   convertedBigNumber = parseInt(convertedBigNumber);
+    //   // Return int value: 
+    //   return convertedBigNumber
+    // }
 
     // If it's not an int, return the string value
     finalResult += convertedBigNumber;
