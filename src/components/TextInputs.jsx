@@ -157,8 +157,8 @@ export function TextInputs({
                 setExecutionError(jsonParsed["error"] || "");
               }
 
-              setInputs([])
-              setAmount("")
+              // setInputs([])
+              // setAmount("")
 
               setTimeout(() => {
                 setExecutingTransaction(false);
