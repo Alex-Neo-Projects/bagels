@@ -206,9 +206,9 @@ export function TextInputs({
 
       {executionError && (
         <div className="flex flex-row justify-center items-center space-x-4 pt-4 w-full overflow-hidden break-all">
-          <p className="text-md font-bold w-10">Error</p>
+          {/* <p className="text-md font-bold w-10">Error</p> */}
           <div className="flex w-full border border-[#FF0057] text-[#FF0057] rounded-lg p-2 text-sm">
-            <p className="text-sm">{executionError}</p>
+            <pre className="text-sm whitespace-pre-wrap	break-words text-start">{executionError}</pre>
           </div>
         </div>
       )}
