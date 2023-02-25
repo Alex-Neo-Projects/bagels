@@ -264,7 +264,7 @@ app.post("/executeTransaction", async (req, res) => {
 
       const decodedResult = decodeFunctionResult(iface, fullFunction, txRes);
 
-      if (decodedResult.length > 0)
+      if (decodedResult.length >= 0)
         output += `Output: ${decodedResult}\n\n`;
     } catch (e) {
       errorOutput += e.message;
@@ -389,12 +389,12 @@ app.listen(PORT, () =>
   console.log("server started and listening for requests")
 );
 
-function parseOutputAndConvertToCorrectType(input) {
+function parseOutputAndConvertToCorrectType(input, isArray) {
   let finalResult = "";
 
   // If the output is: '' (empty string), show that in the UI!
   if (input === "") {
-    finalResult += '';
+    finalResult += isArray ? "" : `""`;
   }
 
   if (ethers.BigNumber.isBigNumber(input)) { 
@@ -449,14 +449,15 @@ function decodeFunctionResult(iface, functionName, txResult) {
       let returnArr = [];
 
       functionResult[index].map((item, mapIndex) => {
-        const parsedOutput = parseOutputAndConvertToCorrectType(item); 
+        const parsedOutput = parseOutputAndConvertToCorrectType(item, true); 
 
         returnArr.push(parsedOutput); 
       });
 
-      parsedInput = JSON.stringify(returnArr).replace(/\\/g, '');
+
+      parsedInput = JSON.stringify(returnArr);
     } else {
-      parsedInput = parseOutputAndConvertToCorrectType(functionResult[index]);
+      parsedInput = parseOutputAndConvertToCorrectType(functionResult[index], false);
     }
 
     parsedInput += addCommaToStringIfNeeded(functionResult, index);
