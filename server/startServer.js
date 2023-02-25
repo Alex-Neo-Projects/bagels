@@ -265,7 +265,7 @@ app.post("/executeTransaction", async (req, res) => {
       const decodedResult = decodeFunctionResult(iface, fullFunction, txRes);
 
       if (decodedResult.length > 0)
-        output += `Output: ${decodeFunctionResult(iface, fullFunction, txRes)}\n\n`;
+        output += `Output: ${decodedResult}\n\n`;
     } catch (e) {
       errorOutput += e.message;
     }
@@ -394,7 +394,7 @@ function parseOutputAndConvertToCorrectType(input) {
 
   // If the output is: '' (empty string), show that in the UI!
   if (input === "") {
-    finalResult += '""';
+    finalResult += '';
   }
 
   if (ethers.BigNumber.isBigNumber(input)) { 
@@ -454,7 +454,7 @@ function decodeFunctionResult(iface, functionName, txResult) {
         returnArr.push(parsedOutput); 
       });
 
-      parsedInput = JSON.stringify(returnArr);
+      parsedInput = JSON.stringify(returnArr).replace(/\\/g, '');
     } else {
       parsedInput = parseOutputAndConvertToCorrectType(functionResult[index]);
     }
