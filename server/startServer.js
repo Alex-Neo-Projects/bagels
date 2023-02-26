@@ -97,15 +97,21 @@ app.post("/deployContract", async (req, res) => {
 
       const contract = createNewContract(contractFilename, abis, tempContract);
 
-      contracts[contractFilename] && contracts[contractFilename]["historicalChanges"].push(
-        contracts[contractFilename]["currentVersion"]
-      );
+      if (contracts[contractFilename]) {
+        contracts[contractFilename]["historicalChanges"].push(
+          contracts[contractFilename]["currentVersion"]
+        );
+      } else {
+        contracts[contractFilename] = {
+          historicalChanges: []
+        };
+      }
       contracts[contractFilename]["currentVersion"] = contract;
     }
 
     return res.status(200).send({
       message: "Contract Deployed",
-      contract: contracts[contractFilename]["currentVersion"],
+      contract: contracts[contractFilename]?.["currentVersion"],
     });
   } catch (e) {
     return res.status(500).send({ error: e.message });
