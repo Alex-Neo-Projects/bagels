@@ -5,17 +5,38 @@ import { SERVER_URL } from '../constants.js'
 
 export default function Home() {
   const [solidityFiles, setSolidityFiles] = useState([])
+  const [ganachePort, setGanachePort] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  
 
   useEffect(() => {
     async function loadBasics() {
       setLoading(true)
       await getSolidityFiles()
+      await getGanachePort()
     }
 
     loadBasics()
   }, [])
+
+  async function getGanachePort() {
+    try {
+      const result = await fetch(`${SERVER_URL}/ganachePortNumber`, {
+        method: 'GET',
+      })
+      
+      const jsonifiedResult = await result.json()
+      
+      if (result.status === 200) {
+         setGanachePort(jsonifiedResult["pNumber"])
+      } else {
+        throw new Error('Unable to get ganache port from ganache provider')
+      }
+    } catch (e) {
+      setError(e)
+    }
+  }
 
   async function getSolidityFiles() {
     try {
@@ -49,7 +70,7 @@ export default function Home() {
   })
 
   return (
-    <Header>
+    <Header ganachePortNumber={ganachePort}>
       <div className="flex flex-col w-full justify-center items-center space-y-10 overflow-auto">
         <div className="flex w-screen max-w-[35em] px-2">
           <div

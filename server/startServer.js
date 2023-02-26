@@ -11,17 +11,23 @@ import Ganache from "ganache";
 
 // Receives the forking url
 let networkUrl = process.argv[3];
-
+let ganachePortNumber = process.argv[4];
+console.log(ganachePortNumber);
+console.log(process.argv)
 let ganacheProvider = Ganache.provider({
-  wallet: {
-    defaultBalance: 100000,
-  },
-  logging: {
-    debug: false,
-    verbose: false,
-    quiet: true,
-  },
-  ...(networkUrl.length > 0 && { fork: { url: networkUrl || undefined } }), // Conditionally add the Fork object if network url exists
+    wallet: {
+        defaultBalance: 100000,
+    },
+    logging: {
+        debug: false,
+        verbose: false,
+        quiet: true,
+    },
+    server: {
+        port: ganachePortNumber
+    },
+
+    ...(networkUrl.length > 0 && { fork: { url: networkUrl || undefined } }), // Conditionally add the Fork object if network url exists
 });
 
 const provider = new ethers.providers.Web3Provider(ganacheProvider);
@@ -47,258 +53,258 @@ let libDirLocation = "";
 let solidityFileDirMappings = {};
 let contracts = {};
 
+app.get("/ganachePortNumber", (req, res) => {
+    return res.status(200).send({ pNumber: ganachePortNumber });
+})
+
 app.get("/", (req, res) => {
-  res.send("Welcome to the bagels API");
+    res.send("Welcome to the bagels API");
 });
 
-app.get("/solidityFiles", async (req, res) => {
-  try {
-    const solidityFiles = getSolidityFiles();
-
-    return res.status(200).send({ files: solidityFiles });
-  } catch (e) {
-    return res.status(500).send({ error: e.message });
-  }
-});
-
-app.post("/deployContract", async (req, res) => {
-  try {
-    const { contractFilename, constructor } = req.body;
-
-    if (!contractFilename) {
-      throw new Error("Cannot deploy contract, no filename provided");
-    }
-
-    let firstDeploy = false;
-
-    // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
-    if (contracts[contractFilename]) {
-      if (contracts[contractFilename]["historicalChanges"].length === 0) {
-        firstDeploy = true;
-      }
-    }
-
-    if (firstDeploy || constructor.length > 0) {
-      const [abis, byteCodes] = await compileContract(contractFilename);
-
-      let tempContract;
-
-      if (constructor.length > 0) {
-        let [factory, contract] = await deployContracts(
-          abis,
-          byteCodes,
-          constructor
-        );
-        tempContract = contract;
-      } else {
-        let [factory, contract] = await deployContracts(abis, byteCodes, []);
-        tempContract = contract;
-      }
-
-      const contract = createNewContract(contractFilename, abis, tempContract);
-
-      contracts[contractFilename]["historicalChanges"].push(
-        contracts[contractFilename]["currentVersion"]
-      );
-      contracts[contractFilename]["currentVersion"] = contract;
-    }
-
-    return res.status(200).send({
-      message: "Contract Deployed",
-      contract: contracts[contractFilename]["currentVersion"],
-    });
-  } catch (e) {
-    return res.status(500).send({ error: e.message });
-  }
-});
-
-app.get("/abi", async (req, res) => {
-  try {
-    const { contractName } = req.query;
-    let [abis, bytecode] = await compileContract(contractName);
-    return res.status(200).send({ abi: abis, bytecode: bytecode });
-  } catch (e) {
-    return res.status(500).send({ error: e.message });
-  }
-});
-
-app.get("/balances", async (req, res) => {
-  try {
-    const ether_balance = await checkEtherBalance(provider, wallet.address);
-    res.status(200).send({
-      eth: ether_balance,
-    });
-  } catch (e) {
-    res.status(500).send({ error: e.message });
-  }
-});
-
-function parseParams(params) { 
-  let returnVal = []; 
-
-  try { 
-    params.map((param) => { 
-      try {
-        // if (param[1].includes('bytes')) { 
-        //   throw new Error('unsupported type');
-        // }
-
-        // Need to replace single quotes (if there are any) with double quotes since 'myString' is not valid json
-        let replaceSingleQuotes = param[0].replace(/'/g, '"');
-        let isPossibleArray = /[\[\]\(\)]/;
-
-        if (isPossibleArray.test(replaceSingleQuotes)) { 
-
-          const arr = JSON.parse(replaceSingleQuotes);
-          if (Array.isArray(arr)) {
-            returnVal.push(arr)
-          }
-          else { 
-            returnVal.push(param[0])
-          }
-        } 
-        // Don't want to do JSON.parse on a regular string like: "0xeb44211A7248a696D4DB7cda0ceD6aD3178E6220" since it'll just throw errors.
-        else { 
-          returnVal.push(replaceSingleQuotes)
-        }
-      } catch (e) {
-        // Show array error
-        if (param[1] === 'address[]') {
-          throw new Error(`Couldn't parse the input: ${param[0]} \n\nPlease make sure to put the array values in a string. \n\nExample: [\"0x72E998a51472E9b6dF293FFf4ae132272711f240\"]`)
-        } else if (param[1] === 'tuple') { 
-          throw new Error(`Couldn't parse the input: ${param[0]} \n\nPossible problems: \n\n-Did you format the struct correctly? Example: ["string", 123] \n\n-Are you sure your inputs match the types of your struct? \n\n-If you're trying to input an address, use quotes around the address: ["0xCEf..."]`);
-        } 
-        // else if (param[1].includes('bytes')) { 
-        //   throw new Error(`Bagels currently doesn't support inputs of type: ${param[1]}\n\nIf this is a problem for you, please open an issue:\n\nhttps://github.com/Alex-Neo-Projects/bagels/issues`)
-        // } 
-        else {
-          throw new Error(`Couldn't parse the input: ${param[0]} \n\nAre you sure your inputs match the type: ${param[1]}?`);
-        }
-      }
-    });
-  } catch (e) { 
-    throw new Error(e);
-  }
-
-  return returnVal; 
-}
-
-function getFullFunctionForEthers(functionName, params) { 
-  let fullFunction = functionName + '(';
-
-  // Need to get functions in the style: slot0(address, int24)
-  // Because ethers needs this to differentiate between that example, and the possibility of another function with the same name but different parameters.
-  // Example: slot0(address, int24) & slot0(address, int24, uint[])
-  // If we only pass in slot0 to the interface and there are two slot0's, ethers will throw an error.  
-  params.map((item, index) => { 
-    let currType = item[1];
-    fullFunction += currType
-    
-    fullFunction += addCommaToStringIfNeeded(params, index);
-  })
-
-  fullFunction += ')'
-  return fullFunction;
-}
-
-app.post("/executeTransaction", async (req, res) => {
-  try {
-    const {
-      contractFilename,
-      amount,
-      functionName,
-      stateMutability,
-      type,
-      params,
-    } = req.body;
-
-    if (
-      !contractFilename ||
-      amount < 0 ||
-      !functionName ||
-      !params ||
-      !stateMutability ||
-      !type
-    ) {
-      throw new Error(
-        "Unable to execute transaction, please provide correct parameters"
-      );
-    }
-
-    if (contracts[contractFilename] === undefined) {
-      throw new Error("Unable to execute transaction, reloading contract!");
-    }
-
-    let iface = new ethers.utils.Interface(
-      Object.values(contracts[contractFilename]["currentVersion"]["abis"]).flat(
-        1
-      )
-    );
-
-    const parsedParams = parseParams(params);
-    const fullFunction = getFullFunctionForEthers(functionName, params);
-    const functionEncodedSignature = iface.encodeFunctionData(fullFunction, parsedParams);
-
-    let txRes;
-    let txReceipt;
-
-    // Convert the value to a hex value since the frontend sends ints
-    let hexAmount = amount ? '0x' + amount.toString(16) : "0x0";
-
-    let paramData = {
-      from: wallet.address,
-      to: contracts[contractFilename]["currentVersion"]["contract"]["address"],
-      value: hexAmount,
-      data: functionEncodedSignature,
-      gas: 30000000
-    };
-
-    if (!paramData.to) {
-      throw new Error("Couldn't deploy contract.");
-    }
-
-    // Send a eth_call transaction
-    // We use this to see outputs for functions with returns & view access modifier
-    let output = "";
-    let errorOutput = "";
+app.get("/solidityFiles", async(req, res) => {
     try {
-      txRes = await callContractFunction(paramData);
+        const solidityFiles = getSolidityFiles();
 
-      const decodedResult = decodeFunctionResult(iface, fullFunction, txRes);
-
-      if (decodedResult.length >= 0)
-        output += `Output: ${decodedResult}\n\n`;
+        return res.status(200).send({ files: solidityFiles });
     } catch (e) {
-      errorOutput += e.message;
+        return res.status(500).send({ error: e.message });
+    }
+});
+
+app.post("/deployContract", async(req, res) => {
+    try {
+        const { contractFilename, constructor } = req.body;
+
+        if (!contractFilename) {
+            throw new Error("Cannot deploy contract, no filename provided");
+        }
+
+        let firstDeploy = false;
+
+        // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
+        if (contracts[contractFilename]) {
+            if (contracts[contractFilename]["historicalChanges"].length === 0) {
+                firstDeploy = true;
+            }
+        }
+
+        if (firstDeploy || constructor.length > 0) {
+            const [abis, byteCodes] = await compileContract(contractFilename);
+
+            let tempContract;
+
+            if (constructor.length > 0) {
+                let [factory, contract] = await deployContracts(
+                    abis,
+                    byteCodes,
+                    constructor
+                );
+                tempContract = contract;
+            } else {
+                let [factory, contract] = await deployContracts(abis, byteCodes, []);
+                tempContract = contract;
+            }
+
+            const contract = createNewContract(contractFilename, abis, tempContract);
+
+            contracts[contractFilename]["historicalChanges"].push(
+                contracts[contractFilename]["currentVersion"]
+            );
+            contracts[contractFilename]["currentVersion"] = contract;
+        }
+
+        return res.status(200).send({
+            message: "Contract Deployed",
+            contract: contracts[contractFilename]["currentVersion"],
+        });
+    } catch (e) {
+        return res.status(500).send({ error: e.message });
+    }
+});
+
+app.get("/abi", async(req, res) => {
+    try {
+        const { contractName } = req.query;
+        let [abis, bytecode] = await compileContract(contractName);
+        return res.status(200).send({ abi: abis, bytecode: bytecode });
+    } catch (e) {
+        return res.status(500).send({ error: e.message });
+    }
+});
+
+app.get("/balances", async(req, res) => {
+    try {
+        const ether_balance = await checkEtherBalance(provider, wallet.address);
+        res.status(200).send({
+            eth: ether_balance,
+        });
+    } catch (e) {
+        res.status(500).send({ error: e.message });
+    }
+});
+
+function parseParams(params) {
+    let returnVal = [];
+
+    try {
+        params.map((param) => {
+            try {
+                // if (param[1].includes('bytes')) { 
+                //   throw new Error('unsupported type');
+                // }
+
+                // Need to replace single quotes (if there are any) with double quotes since 'myString' is not valid json
+                let replaceSingleQuotes = param[0].replace(/'/g, '"');
+                let isPossibleArray = /[\[\]\(\)]/;
+
+                if (isPossibleArray.test(replaceSingleQuotes)) {
+
+                    const arr = JSON.parse(replaceSingleQuotes);
+                    if (Array.isArray(arr)) {
+                        returnVal.push(arr)
+                    } else {
+                        returnVal.push(param[0])
+                    }
+                }
+                // Don't want to do JSON.parse on a regular string like: "0xeb44211A7248a696D4DB7cda0ceD6aD3178E6220" since it'll just throw errors.
+                else {
+                    returnVal.push(replaceSingleQuotes)
+                }
+            } catch (e) {
+                // Show array error
+                if (param[1] === 'address[]') {
+                    throw new Error(`Couldn't parse the input: ${param[0]} \n\nPlease make sure to put the array values in a string. \n\nExample: [\"0x72E998a51472E9b6dF293FFf4ae132272711f240\"]`)
+                } else if (param[1] === 'tuple') {
+                    throw new Error(`Couldn't parse the input: ${param[0]} \n\nPossible problems: \n\n-Did you format the struct correctly? Example: ["string", 123] \n\n-Are you sure your inputs match the types of your struct? \n\n-If you're trying to input an address, use quotes around the address: ["0xCEf..."]`);
+                }
+                // else if (param[1].includes('bytes')) { 
+                //   throw new Error(`Bagels currently doesn't support inputs of type: ${param[1]}\n\nIf this is a problem for you, please open an issue:\n\nhttps://github.com/Alex-Neo-Projects/bagels/issues`)
+                // } 
+                else {
+                    throw new Error(`Couldn't parse the input: ${param[0]} \n\nAre you sure your inputs match the type: ${param[1]}?`);
+                }
+            }
+        });
+    } catch (e) {
+        throw new Error(e);
     }
 
-    // Send transaction
-    if (
-      !(
-        stateMutability === "pure" ||
-        stateMutability === "view" ||
-        stateMutability === "constant"
-      )
-    ) {
-      try {
-        txRes = await sendTransaction(paramData);
-        txReceipt = await getTransaction(txRes);
+    return returnVal;
+}
 
-        let logs = txReceipt.logs;
-        let parsedLogs = logs.map((log) => iface.parseLog(log));
+function getFullFunctionForEthers(functionName, params) {
+    let fullFunction = functionName + '(';
 
-        // 0 === failed tx
-        // 1 === succeesed
-        const txStatus = parseInt(txReceipt.status, 16);
+    // Need to get functions in the style: slot0(address, int24)
+    // Because ethers needs this to differentiate between that example, and the possibility of another function with the same name but different parameters.
+    // Example: slot0(address, int24) & slot0(address, int24, uint[])
+    // If we only pass in slot0 to the interface and there are two slot0's, ethers will throw an error.  
+    params.map((item, index) => {
+        let currType = item[1];
+        fullFunction += currType
 
-        if (txStatus === 0) {
-          // For some reason, the tx fail logs are always empty, so I haven't been able to
-          // get the revert reason.
-          throw new Error("Transaction failed (reverted)");
-        } else {
-          // parsedLogs map to output [{parsed_logs}]
-          if (logs.length > 0) {
-            output += `Event Emmited: ${parsedLogs.map((log) => {
+        fullFunction += addCommaToStringIfNeeded(params, index);
+    })
+
+    fullFunction += ')'
+    return fullFunction;
+}
+
+app.post("/executeTransaction", async(req, res) => {
+            try {
+                const {
+                    contractFilename,
+                    amount,
+                    functionName,
+                    stateMutability,
+                    type,
+                    params,
+                } = req.body;
+
+                if (!contractFilename ||
+                    amount < 0 ||
+                    !functionName ||
+                    !params ||
+                    !stateMutability ||
+                    !type
+                ) {
+                    throw new Error(
+                        "Unable to execute transaction, please provide correct parameters"
+                    );
+                }
+
+                if (contracts[contractFilename] === undefined) {
+                    throw new Error("Unable to execute transaction, reloading contract!");
+                }
+
+                let iface = new ethers.utils.Interface(
+                    Object.values(contracts[contractFilename]["currentVersion"]["abis"]).flat(
+                        1
+                    )
+                );
+
+                const parsedParams = parseParams(params);
+                const fullFunction = getFullFunctionForEthers(functionName, params);
+                const functionEncodedSignature = iface.encodeFunctionData(fullFunction, parsedParams);
+
+                let txRes;
+                let txReceipt;
+
+                // Convert the value to a hex value since the frontend sends ints
+                let hexAmount = amount ? '0x' + amount.toString(16) : "0x0";
+
+                let paramData = {
+                    from: wallet.address,
+                    to: contracts[contractFilename]["currentVersion"]["contract"]["address"],
+                    value: hexAmount,
+                    data: functionEncodedSignature,
+                    gas: 30000000
+                };
+
+                if (!paramData.to) {
+                    throw new Error("Couldn't deploy contract.");
+                }
+
+                // Send a eth_call transaction
+                // We use this to see outputs for functions with returns & view access modifier
+                let output = "";
+                let errorOutput = "";
+                try {
+                    txRes = await callContractFunction(paramData);
+
+                    const decodedResult = decodeFunctionResult(iface, fullFunction, txRes);
+
+                    if (decodedResult.length >= 0)
+                        output += `Output: ${decodedResult}\n\n`;
+                } catch (e) {
+                    errorOutput += e.message;
+                }
+
+                // Send transaction
+                if (!(
+                        stateMutability === "pure" ||
+                        stateMutability === "view" ||
+                        stateMutability === "constant"
+                    )) {
+                    try {
+                        txRes = await sendTransaction(paramData);
+                        txReceipt = await getTransaction(txRes);
+
+                        let logs = txReceipt.logs;
+                        let parsedLogs = logs.map((log) => iface.parseLog(log));
+
+                        // 0 === failed tx
+                        // 1 === succeesed
+                        const txStatus = parseInt(txReceipt.status, 16);
+
+                        if (txStatus === 0) {
+                            // For some reason, the tx fail logs are always empty, so I haven't been able to
+                            // get the revert reason.
+                            throw new Error("Transaction failed (reverted)");
+                        } else {
+                            // parsedLogs map to output [{parsed_logs}]
+                            if (logs.length > 0) {
+                                output += `Event Emmited: ${parsedLogs.map((log) => {
               let numEvents = log.eventFragment.inputs.length;
               let args = `(${log.args
                 .slice(0, numEvents)
