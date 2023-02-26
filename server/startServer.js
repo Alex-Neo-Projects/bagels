@@ -97,7 +97,7 @@ app.post("/deployContract", async (req, res) => {
 
       const contract = createNewContract(contractFilename, abis, tempContract);
 
-      contracts[contractFilename]["historicalChanges"].push(
+      contracts[contractFilename] && contracts[contractFilename]["historicalChanges"].push(
         contracts[contractFilename]["currentVersion"]
       );
       contracts[contractFilename]["currentVersion"] = contract;
