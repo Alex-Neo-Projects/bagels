@@ -71,7 +71,6 @@ app.post("/deployContract", async (req, res) => {
 
     let firstDeploy = false;
 
-    // This would be easier in typescript... simply contracts?.contractFilename?.historicalChanges?.length === 0 😩
     if (contracts[contractFilename]) {
       if (contracts[contractFilename]["historicalChanges"].length === 0) {
         firstDeploy = true;
